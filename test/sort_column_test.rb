@@ -6,6 +6,10 @@ class SortColumnTest < ActiveSupport::TestCase
     assert_equal('SELECT "properties".* FROM "properties"', Property.sort(nil).to_sql)
   end
 
+  test "::sort('column')" do
+    assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" ASC', Property.sort('id').to_sql.gsub(/\s+/, ' '))
+  end
+  
   test '::sort(:column)' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" ASC', Property.sort(:id).to_sql.gsub(/\s+/, ' '))
   end

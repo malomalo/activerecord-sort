@@ -15,7 +15,7 @@ class ActiveRecord::Base
       return resource if ordering.size == 0
       
       ordering.each do |order|
-        order = sort_order_to_column_and_options(order)
+        order = Array(order)
 
         order.each do |column_or_relation, options|
           if self.column_names.include?(column_or_relation.to_s)
@@ -54,7 +54,7 @@ class ActiveRecord::Base
         options = [options] if !options.is_a?(Array)
 
         options.each do |order|
-          order = sort_order_to_column_and_options(order)
+          order = Array(order)
           order.each do |column, options|
             column = relation.klass.arel_table[column]
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
@@ -87,7 +87,7 @@ class ActiveRecord::Base
         options = [options] if !options.is_a?(Array)
 
         options.each do |order|
-          order = sort_order_to_column_and_options(order)
+          order = Array(order)
           order.each do |column, options|
             column = relation.klass.arel_table[column]
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
@@ -106,14 +106,6 @@ class ActiveRecord::Base
       end
 
       resource
-    end
-
-    def sort_order_to_column_and_options(column)
-      if column.is_a?(Symbol)
-        [column]
-      else
-        column
-      end
     end
 
   end
