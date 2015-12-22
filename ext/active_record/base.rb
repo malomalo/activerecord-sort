@@ -1,5 +1,9 @@
-class ActiveRecord::Base
-  class << self
+require 'active_record'
+require 'active_record/relation'
+
+module ActiveRecord
+  module QueryMethods
+  # class << self
 
     # ordering:
     # :id
