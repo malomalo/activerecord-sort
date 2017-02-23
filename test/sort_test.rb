@@ -12,6 +12,10 @@ class SortTest < ActiveSupport::TestCase
     end
   end
   
+  test '::sort(:random)' do
+    assert_equal('SELECT "properties".* FROM "properties" ORDER BY RANDOM()', Property.sort(:random).to_sql.gsub(/\s+/, ' '))
+  end
+  
   test '::sort(:id => :invalid)' do
     assert_raises(ActiveRecord::StatementInvalid) do
       Property.sort(:id => :invalid)

@@ -19,6 +19,10 @@ module Arel
         end
       end
       
+      def visit_Arel_Nodes_RandomOrdering o, collector
+        collector << "RANDOM()"
+      end
+      
     end
   end
 end

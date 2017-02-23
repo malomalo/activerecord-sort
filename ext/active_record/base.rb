@@ -12,6 +12,7 @@ module ActiveRecord
     # :id => {:desc => :nulls_last}
     # :listings => :id
     # :listings => {:id => {:asc => :nulls_first}}
+    # :random
     def sort(*ordering)
       resource = all
       ordering.compact!
@@ -22,7 +23,9 @@ module ActiveRecord
         order = Array(order)
 
         order.each do |column_or_relation, options|
-          if self.column_names.include?(column_or_relation.to_s)
+          if column_or_relation.to_sym == :random
+            resource = resource.random_sort
+          elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(column_or_relation, options)
           elsif reflect_on_association(column_or_relation.to_sym)
             resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')])
@@ -34,6 +37,10 @@ module ActiveRecord
       end
 
       resource
+    end
+    
+    def random_sort
+      self.order(Arel::Nodes::RandomOrdering.new)
     end
 
     def sort_for_column(column, options)
