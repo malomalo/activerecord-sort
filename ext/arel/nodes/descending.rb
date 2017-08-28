@@ -6,7 +6,6 @@ module Arel
 
       def initialize expr, nulls=nil
         super(expr)
-        @expr = expr
         @nulls = nulls
       end
 
