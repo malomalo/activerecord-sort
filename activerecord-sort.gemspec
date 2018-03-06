@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = `git ls-files -- {test}/*`.split("\n")
   spec.require_paths = ["lib"]
 
-  spec.add_runtime_dependency 'activerecord', '~> 5.1.0'
+  spec.add_runtime_dependency 'activerecord', '~> 5.2.0.rc1'
     
   spec.add_development_dependency 'pg'
   spec.add_development_dependency "bundler"
@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'minitest'
   spec.add_development_dependency 'minitest-reporters'
   spec.add_development_dependency "simplecov"
-  spec.add_development_dependency "factory_girl"
+  spec.add_development_dependency "factory_bot"
   spec.add_development_dependency "faker"
   # spec.add_development_dependency 'sdoc',                '~> 0.4'
   # spec.add_development_dependency 'sdoc-templates-42floors', '~> 0.3'

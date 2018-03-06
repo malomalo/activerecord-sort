@@ -1,29 +1,29 @@
 PATH
   remote: .
   specs:
-    activerecord-sort (5.0.0.1)
-      activerecord (~> 5.1.0)
+    activerecord-sort (5.2.0)
+      activerecord (~> 5.2.0.rc1)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (5.1.0)
-      activesupport (= 5.1.0)
-    activerecord (5.1.0)
-      activemodel (= 5.1.0)
-      activesupport (= 5.1.0)
-      arel (~> 8.0)
-    activesupport (5.1.0)
+    activemodel (5.2.0.rc1)
+      activesupport (= 5.2.0.rc1)
+    activerecord (5.2.0.rc1)
+      activemodel (= 5.2.0.rc1)
+      activesupport (= 5.2.0.rc1)
+      arel (>= 9.0)
+    activesupport (5.2.0.rc1)
       concurrent-ruby (~> 1.0, >= 1.0.2)
       i18n (~> 0.7)
       minitest (~> 5.1)
       tzinfo (~> 1.1)
     ansi (1.5.0)
-    arel (8.0.0)
+    arel (9.0.0)
     builder (3.2.3)
     concurrent-ruby (1.0.5)
     docile (1.1.5)
-    factory_girl (4.8.0)
+    factory_bot (4.8.2)
       activesupport (>= 3.0.0)
     faker (1.7.3)
       i18n (~> 0.5)
@@ -44,7 +44,7 @@ GEM
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.0)
     thread_safe (0.3.6)
-    tzinfo (1.2.3)
+    tzinfo (1.2.5)
       thread_safe (~> 0.1)
 
 PLATFORMS
@@ -53,7 +53,7 @@ PLATFORMS
 DEPENDENCIES
   activerecord-sort!
   bundler
-  factory_girl
+  factory_bot
   faker
   minitest
   minitest-reporters
@@ -62,4 +62,4 @@ DEPENDENCIES
   simplecov
 
 BUNDLED WITH
-   1.14.4
+   1.16.1
