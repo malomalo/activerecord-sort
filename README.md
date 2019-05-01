@@ -1,4 +1,4 @@
-# ActiveRecord::sort
+# ActiveRecord::sort [![Travis CI](https://travis-ci.org/malomalo/activerecord-sort.svg?branch=master)](https://travis-ci.org/malomalo/activerecord-sort)
 
 `ActiveRecord::sort` provides and easy way to accept user input and order a query by the input.
 
