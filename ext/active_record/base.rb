@@ -43,9 +43,10 @@ module ActiveRecord
       self.order(Arel::Nodes::RandomOrdering.new)
     end
 
+    # TODO: probably don't need to cast to sym
     def sort_for_column(column, options)
       column = self.arel_table[column.to_s.underscore]
-      direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+      direction = (options.is_a?(Hash) || options.is_a?(ActionController::Parameters) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
       nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
       if direction == :desc
