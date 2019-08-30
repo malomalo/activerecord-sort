@@ -30,8 +30,6 @@ module ActiveRecord
           elsif reflect_on_association(column_or_relation.to_sym)
             resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')])
             resource = resource.sort_for_relation(column_or_relation.to_sym, options)
-          elsif column_or_relation.upcase == "RANDOM()"
-            resource = resource.order(column_or_relation)
           else
             raise ActiveRecord::StatementInvalid.new("Unkown column #{column_or_relation}")
           end
