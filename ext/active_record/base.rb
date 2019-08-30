@@ -113,7 +113,7 @@ module ActiveRecord
               order = Arel::Nodes::Descending.new(column, nulls)
             end
 
-            resource = resource.joins(relation.name)
+            resource = resource.left_outer_joins(relation.name)
             resource = resource.order(order)
           end
         end
