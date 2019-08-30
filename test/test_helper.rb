@@ -8,11 +8,11 @@ $LOAD_PATH << File.expand_path('../lib', __FILE__)
 require "minitest/autorun"
 require 'minitest/unit'
 require 'minitest/reporters'
-require 'factory_girl'
+require 'factory_bot'
 require 'active_record/sort'
 require 'faker'
 
-FactoryGirl.find_definitions
+FactoryBot.find_definitions
 
 # Setup the test db
 ActiveSupport.test_order = :random
@@ -22,5 +22,5 @@ Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 class ActiveSupport::TestCase
   include ActiveRecord::TestFixtures
-  include FactoryGirl::Syntax::Methods
+  include FactoryBot::Syntax::Methods
 end

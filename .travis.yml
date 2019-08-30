@@ -1,0 +1,49 @@
+dist: xenial
+language: ruby
+sudo: false
+
+cache:
+  bundler: true
+  directories:
+    - /home/travis/.rvm/gems
+
+rvm:
+  - 2.5
+  - 2.6
+
+env:
+  matrix:
+    - RAILS_VERSION=v6.0.0 GEM=activerecord:mysql2
+    - RAILS_VERSION=v6.0.0 GEM=activerecord:sqlite3
+    - RAILS_VERSION=v6.0.0 GEM=activerecord:postgresql
+
+services:
+  - mysql
+addons:
+  postgresql: "10"
+
+before_install:
+  - unset BUNDLE_GEMFILE
+  - gem update --system
+  - gem update bundler
+
+install:
+  - git clone --branch $RAILS_VERSION https://github.com/rails/rails.git ~/build/rails
+
+before_script:
+  - pushd ~/build/rails
+  - git status
+  - sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/build/rails/activerecord/Rakefile
+  - sed -i "s/t.warning = true/t.warning = false/g" ~/build/rails/activerecord/Rakefile
+  - sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\('~\/build\/malomalo\/activerecord-sort\/lib'\)\)\nrequire 'active_record/sort'" ~/build/rails/activerecord/test/cases/helper.rb
+  - cat ~/build/rails/Gemfile
+  - rm ~/build/rails/Gemfile.lock
+  - "sed -i \"/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\\('~\\/build\\/malomalo\\/activerecord-sort'\\)\" ~/build/rails/Gemfile"
+  - cat ~/build/rails/Gemfile
+  - bundle install --jobs=3 --retry=3
+  - popd
+  - bundle install --jobs=3 --retry=3
+
+script:
+  - bundle exec rake test
+  - cd ~/build/rails && ci/travis.rb
