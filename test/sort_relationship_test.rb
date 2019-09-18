@@ -33,5 +33,13 @@ class SortColumnTest < ActiveSupport::TestCase
       ORDER BY "addresses"."id" DESC NULLS LAST
     SQL
   end
+  
+  test '::sort(:belongs_to_relationship => {:column => :desc})' do
+    assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), Address.sort(:property => {:id => :desc}).to_sql.gsub(/\s+/, ' '))
+      SELECT "addresses".* FROM "addresses"
+      LEFT OUTER JOIN "properties" ON "properties"."id" = "addresses"."property_id"
+      ORDER BY "properties"."id" DESC
+    SQL
+  end
 
 end
