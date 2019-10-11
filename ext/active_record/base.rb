@@ -26,7 +26,7 @@ module ActiveRecord
           if column_or_relation.to_sym == :random
             resource = resource.random_sort
           elsif self.column_names.include?(column_or_relation.to_s)
-            resource = resource.sort_for_column(column_or_relation, options)
+            resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
           elsif reflect_on_association(column_or_relation.to_sym)
             resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')])
             resource = resource.sort_for_relation(column_or_relation.to_sym, options)
@@ -45,7 +45,6 @@ module ActiveRecord
 
     # TODO: probably don't need to cast to sym
     def sort_for_column(column, options)
-      column = self.arel_table[column.to_s.underscore]
       direction = (options.is_a?(Hash) || options.class.name == "ActionController::Parameters" ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
       nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
@@ -68,7 +67,7 @@ module ActiveRecord
         options.each do |order|
           order = Array(order)
           order.each do |column, options|
-            column = relation.klass.arel_table[column]
+            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column], relation.name)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
