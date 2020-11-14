@@ -9,7 +9,7 @@ require "minitest/autorun"
 require 'minitest/unit'
 require 'minitest/reporters'
 require 'factory_bot'
-require 'sunstone'
+# require 'sunstone'
 require 'active_record/sort'
 require 'faker'
 require 'webmock'
@@ -29,7 +29,7 @@ class ActiveSupport::TestCase
   include ActiveRecord::TestFixtures
   include FactoryBot::Syntax::Methods
   include WebMock::API
-  
+
   def deep_transform_query(object)
     case object
     when Hash
@@ -78,7 +78,7 @@ class ActiveSupport::TestCase
           }
         }
       }
-      
+
       req_stub = stub_request(:get, /^http:\/\/example.com/).with do |req|
         case req.uri.path
         when '/tables'
@@ -89,7 +89,7 @@ class ActiveSupport::TestCase
           false
         end
       end
-      
+
       req_stub.to_return do |req|
         case req.uri.path
         when '/tables'
