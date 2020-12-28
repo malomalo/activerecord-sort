@@ -50,4 +50,7 @@ class Line < SunstoneRecord
   has_many :points
 end
 
-SunstoneRecord.establish_connection(adapter: 'sunstone', url: 'http://example.com')
+SunstoneRecord.establish_connection({
+  adapter: 'sunstone',
+  endpoint: 'http://example.com'
+})

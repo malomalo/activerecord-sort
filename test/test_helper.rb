@@ -9,7 +9,7 @@ require "minitest/autorun"
 require 'minitest/unit'
 require 'minitest/reporters'
 require 'factory_bot'
-# require 'sunstone'
+require 'sunstone'
 require 'active_record/sort'
 require 'faker'
 require 'webmock'

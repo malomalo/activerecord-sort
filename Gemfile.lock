@@ -1,27 +1,19 @@
-GIT
-  remote: git://github.com/malomalo/arel-extensions.git
-  revision: b0f7ee97ff7c1212730db23030f5bc3b46d1571c
-  branch: v6-1
-  specs:
-    arel-extensions (6.1.0.0)
-      activerecord (>= 6.1.0.rc1)
-
 PATH
   remote: .
   specs:
     activerecord-sort (6.1.0.0)
-      activerecord (>= 6.1.0.rc1)
-      arel-extensions (>= 6.1.0)
+      activerecord (>= 6.1.0)
+      arel-extensions (>= 6.1.0.rc2)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (6.1.0.rc1)
-      activesupport (= 6.1.0.rc1)
-    activerecord (6.1.0.rc1)
-      activemodel (= 6.1.0.rc1)
-      activesupport (= 6.1.0.rc1)
-    activesupport (6.1.0.rc1)
+    activemodel (6.1.0)
+      activesupport (= 6.1.0)
+    activerecord (6.1.0)
+      activemodel (= 6.1.0)
+      activesupport (= 6.1.0)
+    activesupport (6.1.0)
       concurrent-ruby (~> 1.0, >= 1.0.2)
       i18n (>= 1.6, < 2)
       minitest (>= 5.1)
@@ -30,14 +22,17 @@ GEM
     addressable (2.7.0)
       public_suffix (>= 2.0.2, < 5.0)
     ansi (1.5.0)
+    arel-extensions (6.1.0.rc2)
+      activerecord (>= 6.1.0)
     builder (3.2.4)
     concurrent-ruby (1.1.7)
     cookie_store (0.1.4)
-    crack (0.4.4)
-    docile (1.3.2)
+    crack (0.4.5)
+      rexml
+    docile (1.3.4)
     factory_bot (6.1.0)
       activesupport (>= 5.0.0)
-    faker (2.14.0)
+    faker (2.15.1)
       i18n (>= 1.6, < 2)
     hashdiff (1.0.1)
     i18n (1.8.5)
@@ -51,31 +46,33 @@ GEM
     msgpack (1.3.3)
     pg (1.2.3)
     public_suffix (4.0.6)
-    rake (13.0.1)
+    rake (13.0.3)
+    rexml (3.2.4)
     ruby-progressbar (1.10.1)
-    simplecov (0.19.1)
+    simplecov (0.20.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
-    sunstone (6.0.0.8)
-      activerecord (>= 6.0.0)
+    simplecov_json_formatter (0.1.2)
+    sunstone (6.1.0.rc1)
+      activerecord (>= 6.1.0)
       arel-extensions (>= 6.0.0.5)
       cookie_store
       msgpack
-    tzinfo (2.0.3)
+    tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
-    webmock (3.10.0)
+    webmock (3.11.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
-    zeitwerk (2.4.1)
+    zeitwerk (2.4.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   activerecord-sort!
-  arel-extensions!
   bundler
   factory_bot
   faker
@@ -84,7 +81,7 @@ DEPENDENCIES
   pg
   rake
   simplecov
-  sunstone
+  sunstone (>= 6.1.0.rc1)
   webmock
 
 BUNDLED WITH
