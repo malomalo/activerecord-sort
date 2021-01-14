@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency 'activerecord', '>= 6.1.0'
-  spec.add_runtime_dependency 'arel-extensions', '>= 6.1.0.rc2'
+  spec.add_runtime_dependency 'arel-extensions', '>= 6.1.0'
 
   spec.add_development_dependency 'pg'
   spec.add_development_dependency "bundler"
@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "simplecov"
   spec.add_development_dependency "factory_bot"
   spec.add_development_dependency "faker"
-  spec.add_development_dependency "sunstone", '>= 6.1.0.rc1'
+  spec.add_development_dependency "sunstone", '>= 6.1.0'
   spec.add_development_dependency "webmock"
   # spec.add_development_dependency 'sdoc',                '~> 0.4'
   # spec.add_development_dependency 'sdoc-templates-42floors', '~> 0.3'
