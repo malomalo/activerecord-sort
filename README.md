@@ -1,16 +1,27 @@
-# ActiveRecord::sort [![Travis CI](https://travis-ci.org/malomalo/activerecord-sort.svg?branch=master)](https://travis-ci.org/malomalo/activerecord-sort)
+# ActiveRecord::Sort
 
-`ActiveRecord::sort` provides and easy way to accept user input and order a query by the input.
+`ActiveRecord::Sort` provides and easy way to accept user input and order a query by the input.
 
-Installtion
------------
+Installation
+------------
 
-- Add `gem 'activerecord-sort', require: 'active_record/sort'
-- Run `bundle install`
+Add `sunstone` to your Gemfile and run `bundle`:
+
+```ruby
+gem 'activerecord-sort', require: 'active_record/sort'
+```
+
+Or install the gem and require it:
+
+```sh
+gem install activerecord-sort
+irb
+# => require('active_record/sort')
+```
 
 Examples
 --------
-`ActiveRecord::sort` supports the following cases:
+`ActiveRecord::Sort` supports the following cases:
 
 ```ruby
 Property.sort(:id).to_sql
