@@ -18,23 +18,23 @@ class SortColumnTest < ActiveSupport::TestCase
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" ASC, "properties"."name" ASC', Property.sort(:id, :name).to_sql.gsub(/\s+/, ' '))
   end
 
-  test '::sort(:column => :desc)' do
+  test '::sort(column: :desc)' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" DESC', Property.sort('id' => 'desc').to_sql.gsub(/\s+/, ' '))
   end
 
-  test '::sort(:column => {:asc => :nulls_first})' do
+  test '::sort(column: {asc: :nulls_first})' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" ASC NULLS FIRST', Property.sort(:id => {'asc' => 'nulls_first'}).to_sql.gsub(/\s+/, ' '))
   end
 
-  test '::sort(:column => {:asc => :nulls_last})' do
+  test '::sort(column: {asc: :nulls_last})' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" ASC NULLS LAST', Property.sort(:id => {'asc' => 'nulls_last'}).to_sql.gsub(/\s+/, ' '))
   end
 
-  test '::sort(:column => {:desc => :nulls_first})' do
+  test '::sort(column: {desc: :nulls_first})' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" DESC NULLS FIRST', Property.sort(:id => {'desc' => 'nulls_first'}).to_sql.gsub(/\s+/, ' '))
   end
 
-  test '::sort(:column => {:desc => :nulls_last})' do
+  test '::sort(column: {desc: :nulls_last})' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY "properties"."id" DESC NULLS LAST', Property.sort(:id => {'desc' => 'nulls_last'}).to_sql.gsub(/\s+/, ' '))
   end
 end
