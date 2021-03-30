@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.extra_rdoc_files = %w(README.md)
   spec.rdoc_options.concat ['--main', 'README.md']
 
-  spec.files          = Dir["LICENSE", "README.rdoc", "lib/**/*"]
+  spec.files          = Dir["LICENSE", "README.rdoc", "lib/**/*", "ext/**/*"]
   spec.require_paths  = ["lib"]
 
   spec.add_runtime_dependency 'activerecord', '>= 6.1.0'
