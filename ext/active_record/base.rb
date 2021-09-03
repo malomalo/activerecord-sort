@@ -18,22 +18,25 @@ module ActiveRecord
       ordering.compact!
       ordering.flatten!
       return resource if ordering.size == 0
-      
+
+      order_columns = []
       ordering.each do |order|
         order = Array(order)
-
         order.each do |column_or_relation, options|
           if column_or_relation.to_sym == :random
             resource = resource.random_sort
           elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
           elsif reflect_on_association(column_or_relation.to_sym)
-            resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')])
-            resource = resource.sort_for_relation(column_or_relation.to_sym, options)
+            resource = resource.sort_for_relation(column_or_relation.to_sym, options, order_columns)
           else
             raise ActiveRecord::StatementInvalid.new("Unkown column #{column_or_relation}")
           end
         end
+      end
+      
+      if order_columns.present?
+        resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')], *order_columns)
       end
 
       resource
@@ -57,7 +60,7 @@ module ActiveRecord
       end
     end
 
-    def sort_for_relation(relation, options)
+    def sort_for_relation(relation, options, order_columns)
       resource = self
       relation = reflect_on_association(relation)
 
@@ -68,6 +71,7 @@ module ActiveRecord
           order = Array(order)
           order.each do |column, options|
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column], relation.name)
+            order_columns.push(column)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
@@ -101,6 +105,7 @@ module ActiveRecord
           order = Array(order)
           order.each do |column, options|
             column = relation.klass.arel_table[column]
+            order_columns.push(column)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
