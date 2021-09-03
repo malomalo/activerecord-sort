@@ -28,8 +28,6 @@ module ActiveRecord
           elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
           elsif reflect_on_association(column_or_relation.to_sym)
-            
-            # resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')])
             resource = resource.sort_for_relation(column_or_relation.to_sym, options, order_columns)
           else
             raise ActiveRecord::StatementInvalid.new("Unkown column #{column_or_relation}")
