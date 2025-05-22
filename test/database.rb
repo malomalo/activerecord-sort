@@ -52,5 +52,5 @@ end
 
 SunstoneRecord.establish_connection({
   adapter: 'sunstone',
-  endpoint: 'http://example.com'
+  url: 'http://example.com'
 })
