@@ -17,11 +17,11 @@ jobs:
           - 7.1
           - 7.2
           - 8.0
+          - 8.1
         ruby-version:
-          - 3.2
           - 3.3
           - 3.4
-          - 3.5.0-preview1
+          - 4.0.0-preview2
         postgres-version:
           - 17
 
@@ -68,9 +68,15 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - v8.0.1
+          - 7.2.3
+          - 8.0.4
+          - 8.1.1
         postgres-version:
           - 17
+        include:
+          - rails-version: '7.1.6'
+            ruby-version: '3.3'
+            postgres-version: '17'
 
     steps:
       - name: Install Postgresql
@@ -96,7 +102,7 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch ${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
@@ -105,7 +111,18 @@ jobs:
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
           cat ~/rails/Gemfile
+
+      - name: This can eventually be removed
+        run: |
+          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
+          sed -i 's/module ActiveRecord$/module Rails\nend\nmodule ActiveRecord/' ~/rails/activerecord/test/cases/adapters/postgresql/postgresql_adapter_test.rb || true
+          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
+
+      - name: Bundle
+        run: |
+          pushd ~/rails
           bundle update --jobs=3 --retry=3
+          popd
 
       - run: |
           pushd ~/rails/activerecord
@@ -120,7 +137,12 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - v8.0.1
+          - 7.2.3
+          - 8.0.4
+          - 8.1.1
+        include:
+          - rails-version: '7.1.6'
+            ruby-version: '3.3'
 
     steps:
       - uses: actions/checkout@v4
@@ -136,7 +158,7 @@ jobs:
     
       - name: Download Rails
         run: |
-          git clone --branch ${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
@@ -145,7 +167,21 @@ jobs:
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
           cat ~/rails/Gemfile
+
+      - name: This can eventually be removed
+        run: |
+          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
+          cat ~/rails/Gemfile
+          sed -i 's/module ActiveRecord$/module Rails\nend\nmodule ActiveRecord/' ~/rails/activerecord/test/cases/adapters/sqlite3/dbconsole_test.rb
+          cat  ~/rails/activerecord/test/cases/adapters/sqlite3/dbconsole_test.rb
+          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
+          cat ~/rails/activerecord/Rakefile
+
+      - name: Bundle
+        run: |
+          pushd ~/rails
           bundle update --jobs=3 --retry=3
+          popd
 
       - run: |
           pushd ~/rails/activerecord
@@ -163,7 +199,12 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - v8.0.1
+          - 7.2.3
+          - 8.0.4
+          - 8.1.1
+        include:
+          - rails-version: '7.1.6'
+            ruby-version: '3.3'
 
     steps:
       - name: Install MySQL
@@ -181,7 +222,7 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch ${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
@@ -190,7 +231,20 @@ jobs:
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
           cat ~/rails/Gemfile
+
+      - name: This can eventually be removed
+        run: |
+          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
+          sed -i 's/class WarningsTest < ActiveRecord::AbstractMysqlTestCase$/module Rails\nend\nclass WarningsTest < ActiveRecord::AbstractMysqlTestCase/' ~/rails/activerecord/test/cases/adapters/abstract_mysql_adapter/warnings_test.rb || true
+          sed -i 's/class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase$/module Rails\nend\nclass Mysql2AdapterTest < ActiveRecord::Mysql2TestCase/' ~/rails/activerecord/test/cases/adapters/mysql2/mysql2_adapter_test.rb || true
+          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
+          cat ~/rails/activerecord/Rakefile
+
+      - name: Bundle
+        run: |
+          pushd ~/rails
           bundle update --jobs=3 --retry=3
+          popd
 
       - run: |
           pushd ~/rails/activerecord

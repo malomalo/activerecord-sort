@@ -6,7 +6,6 @@ SimpleCov.start
 $LOAD_PATH << File.expand_path('../lib', __FILE__)
 
 require "minitest/autorun"
-require 'minitest/unit'
 require 'minitest/reporters'
 require 'factory_bot'
 require 'sunstone'
