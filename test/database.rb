@@ -34,6 +34,14 @@ class Property < ActiveRecord::Base
 
   has_many :addresses
 
+  sort_on(:by_name) { |options| order(name: options || :asc) }
+
+  sort_on(:by_address_count, :addresses) do |options|
+    direction = options.is_a?(Hash) ? options.keys.first : options
+    direction ||= :asc
+    order(Arel.sql("COUNT(\"addresses\".\"id\") #{direction.to_s.upcase}")).group('"properties"."id"')
+  end
+
 end
 
 

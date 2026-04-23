@@ -23,7 +23,9 @@ module ActiveRecord
       ordering.each do |order|
         order = Array(order)
         order.each do |column_or_relation, options|
-          if column_or_relation.to_sym == :random
+          if custom = self.sorts[column_or_relation.to_s]
+            resource = resource.sort_for_custom(custom, options)
+          elsif column_or_relation.to_sym == :random
             resource = resource.random_sort
           elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
@@ -44,6 +46,15 @@ module ActiveRecord
     
     def random_sort
       self.order(Arel::Nodes::RandomOrdering.new)
+    end
+
+    def sort_for_custom(custom, options)
+      resource = self
+      if custom[:joins]
+        resource = resource.joins(custom[:joins])
+      end
+      result = resource.instance_exec(options, &custom[:block])
+      result.is_a?(ActiveRecord::Relation) ? result : resource
     end
 
     # TODO: probably don't need to cast to sym
