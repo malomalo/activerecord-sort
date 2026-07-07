@@ -21,6 +21,15 @@ ActiveRecord::Migration.suppress_messages do
       t.string   "name",                 limit: 255
     end
 
+    create_table "tags", force: :cascade do |t|
+      t.string   "name",                 limit: 255
+    end
+
+    create_table "properties_tags", id: false, force: :cascade do |t|
+      t.integer  "property_id"
+      t.integer  "tag_id"
+    end
+
   end
 end
 
@@ -30,9 +39,16 @@ class Address < ActiveRecord::Base
 
 end
 
+class Tag < ActiveRecord::Base
+
+  has_and_belongs_to_many :properties
+
+end
+
 class Property < ActiveRecord::Base
 
   has_many :addresses
+  has_and_belongs_to_many :tags
 
 end
 

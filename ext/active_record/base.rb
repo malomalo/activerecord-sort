@@ -98,6 +98,44 @@ module ActiveRecord
             end
           end
         end
+      elsif relation.macro == :has_and_belongs_to_many
+        options = [options] if !options.is_a?(Array)
+
+        options.each do |order|
+          order = Array(order)
+          order.each do |column, options|
+            # LEFT JOIN the collection and order by the MIN of the requested
+            # column, grouped by this table's primary key, so rows don't fan
+            # out and records with an empty collection still appear:
+            #
+            #   SELECT properties.*, MIN(tags.name) AS min_tags_name
+            #   FROM properties
+            #   LEFT JOIN properties_tags ON properties_tags.property_id = properties.id
+            #   LEFT JOIN tags ON tags.id = properties_tags.tag_id
+            #   GROUP BY properties.id
+            #   ORDER BY MIN(tags.name) ASC
+            #
+            # MIN is the sort key for both directions so toggling asc/desc
+            # reverses the list instead of re-keying multi-value records, and
+            # the ORDER BY uses the aggregate expression rather than its alias
+            # so readers that replace the select list (pluck, ids) keep the
+            # sort.
+            aggregation = Arel::Nodes::Min.new([relation.klass.arel_table[column]])
+            order_columns.push(aggregation.as(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column}")))
+            direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+
+            nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
+            order = if direction == :desc
+              Arel::Nodes::Descending.new(aggregation, nulls)
+            else
+              Arel::Nodes::Ascending.new(aggregation, nulls)
+            end
+
+            resource = resource.left_outer_joins(relation.name)
+            resource = resource.group(klass.arel_table[klass.primary_key])
+            resource = resource.order(order)
+          end
+        end
       elsif relation.macro == :belongs_to || relation.macro == :has_one
         options = [options] if !options.is_a?(Array)
 

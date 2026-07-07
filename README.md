@@ -55,3 +55,17 @@ Property.sort(addresses: {id: {asc: :nulls_frist}}).to_sql
 # => "...INNER JOIN addresses ON addresses.property_id = properties.id
 # => "   ORDER BY addresses.id ASC NULLS FIRST"
 ```
+
+A `has_and_belongs_to_many` relation sorts by the aggregate `MIN` of the
+requested column, grouped by the sorted table's primary key — so each record
+appears once (keyed by its first member alphabetically) and records with an
+empty collection are still included:
+
+```ruby
+Property.sort(tags: :name).to_sql
+# => "SELECT properties.*, MIN(tags.name) AS min_tags_name FROM properties
+# => "   LEFT OUTER JOIN properties_tags ON properties_tags.property_id = properties.id
+# => "   LEFT OUTER JOIN tags ON tags.id = properties_tags.tag_id
+# => "   GROUP BY properties.id
+# => "   ORDER BY MIN(tags.name) ASC"
+```
