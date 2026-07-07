@@ -120,8 +120,12 @@ module ActiveRecord
             # the ORDER BY uses the aggregate expression rather than its alias
             # so readers that replace the select list (pluck, ids) keep the
             # sort.
-            aggregation = Arel::Nodes::Min.new([relation.klass.arel_table[column]])
-            order_columns.push(aggregation.as(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column}")))
+            # Separate Min nodes for the select and the order: on ActiveRecord
+            # <= 8.0, Function#as mutates the node (sets its alias and returns
+            # self), so a shared node would leak `AS min_...` into the ORDER BY.
+            column_attribute = relation.klass.arel_table[column]
+            order_columns.push(Arel::Nodes::Min.new([column_attribute]).as(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column}")))
+            aggregation = Arel::Nodes::Min.new([column_attribute])
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
