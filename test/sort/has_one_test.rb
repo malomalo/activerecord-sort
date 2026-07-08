@@ -25,7 +25,7 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => :name)
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" ASC
     SQL
@@ -35,7 +35,7 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => {:name => :desc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" DESC
     SQL
@@ -45,7 +45,7 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => {:name => {:asc => :nulls_first}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" ASC NULLS FIRST
     SQL
@@ -55,24 +55,24 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => {:name => {:desc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" DESC NULLS LAST
     SQL
   end
 
-  test '::sort(:has_one_relationship => [columns]) aliases each sort column with its own index' do
+  test '::sort(:has_one_relationship => [columns]) sorts by multiple columns' do
     query = Property.sort(:deed => [{:name => :asc}, {:property_id => :desc}])
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0, "deeds"."property_id" AS ar_sort_1 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" ASC, "deeds"."property_id" DESC
     SQL
   end
 
-  # The sort column is selected under an ar_sort_* alias so it can't
-  # overwrite a same-named attribute on the base record.
+  # The sort column lives only in the ORDER BY, never the select list, so
+  # it can't overwrite a same-named attribute on the base record.
   test '::sort(:has_one_relationship => :column) does not clobber a same-named attribute on the base record' do
     Property.create!(name: 'zebra', deed: Deed.create!(name: 'A-Deed'))
     Property.create!(name: 'acorn', deed: Deed.create!(name: 'Z-Deed'))
@@ -81,7 +81,7 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => {:name => {:asc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."name" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."name" ASC NULLS LAST
     SQL
@@ -96,7 +96,7 @@ class HasOneSortTest < ActiveSupport::TestCase
     query = Property.sort(:deed => {:property_id => :asc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "deeds"."property_id" AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
       ORDER BY "deeds"."property_id" ASC
     SQL

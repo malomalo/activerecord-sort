@@ -19,7 +19,6 @@ module ActiveRecord
       ordering.flatten!
       return resource if ordering.size == 0
 
-      order_columns = []
       ordering.each do |order|
         order = Array(order)
         order.each do |column_or_relation, options|
@@ -28,15 +27,11 @@ module ActiveRecord
           elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
           elsif reflect_on_association(column_or_relation.to_sym)
-            resource = resource.sort_for_relation(column_or_relation.to_sym, options, order_columns)
+            resource = resource.sort_for_relation(column_or_relation.to_sym, options)
           else
             raise ActiveRecord::StatementInvalid.new("Unkown column #{column_or_relation}")
           end
         end
-      end
-      
-      if order_columns.present?
-        resource = resource.select(resource.klass.arel_table[Arel::Nodes::SqlLiteral.new('*')], *order_columns)
       end
 
       resource
@@ -60,7 +55,13 @@ module ActiveRecord
       end
     end
 
-    def sort_for_relation(relation, options, order_columns)
+    # The sort key lives only in the ORDER BY — nothing is added to the
+    # select list. That keeps the ORDER BY self-contained (so pluck/ids,
+    # which replace the select list, keep the sort), leaves the caller's
+    # select untouched, and means loaded records carry exactly their own
+    # attributes (a selected join column would overwrite a same-named
+    # attribute on the base table).
+    def sort_for_relation(relation, options)
       resource = self
       relation = reflect_on_association(relation)
 
@@ -69,10 +70,7 @@ module ActiveRecord
 
         options.each do |order|
           Array(order).each do |column_name, options|
-            # Alias the select column (ar_sort_*) so it can't overwrite a
-            # same-named attribute on this table when records are loaded.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            order_columns.push(column.as("ar_sort_#{order_columns.size}"))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
@@ -108,7 +106,7 @@ module ActiveRecord
             # column, grouped by this table's primary key, so rows don't fan /
             # duplicate and records with an empty collection still appear:
             #
-            #   SELECT properties.*, MIN(tags.name) AS ar_sort_0
+            #   SELECT properties.*
             #   FROM properties
             #   LEFT JOIN properties_tags ON properties_tags.property_id = properties.id
             #   LEFT JOIN tags ON tags.id = properties_tags.tag_id
@@ -116,32 +114,15 @@ module ActiveRecord
             #   ORDER BY MIN(tags.name) ASC
             #
             # MIN is the sort key for both directions so toggling asc/desc
-            # reverses the list instead of re-keying multi-value records, and
-            # the ORDER BY uses the aggregate expression rather than its alias
-            # so readers that replace the select list (pluck, ids) keep the
-            # sort.
-            #
-            # TODO: When version <= 8.0 dropped move to remove alias_node
-            # and move to
-            #   column = column.minimum.as("ar_sort_#{order_columns.size}")
-            #   order_columns.push(column)
-            #   ...
-            #   and use column.right where alias_node was used
-            #
-            # Build the As node explicitly rather than via Function#as: on
-            # ActiveRecord <= 8.0, Function#as mutates the receiver and
-            # returns the Min node itself (not an Arel::Nodes::As), so its
-            # return value can't be relied on across supported versions.
+            # reverses the list instead of re-keying multi-value records.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            alias_node = Arel::Nodes::SqlLiteral.new("ar_sort_#{order_columns.size}")
-            order_columns.push(Arel::Nodes::As.new(column.minimum, alias_node))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             order = if direction == :desc
-              Arel::Nodes::Descending.new(alias_node, nulls)
+              Arel::Nodes::Descending.new(column.minimum, nulls)
             else
-              Arel::Nodes::Ascending.new(alias_node, nulls)
+              Arel::Nodes::Ascending.new(column.minimum, nulls)
             end
 
             resource = resource.left_outer_joins(relation.name)
@@ -155,10 +136,7 @@ module ActiveRecord
         options.each do |order|
           order = Array(order)
           order.each do |column, options|
-            # Alias the select column (ar_sort_*) so it can't overwrite a
-            # same-named attribute on this table when records are loaded.
             column = relation.klass.arel_table[column]
-            order_columns.push(column.as("ar_sort_#{order_columns.size}"))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)

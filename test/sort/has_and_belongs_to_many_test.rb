@@ -29,11 +29,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => :name)
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY ar_sort_0 ASC
+      ORDER BY MIN("tags"."name") ASC
     SQL
   end
 
@@ -41,11 +41,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => {:name => :desc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY ar_sort_0 DESC
+      ORDER BY MIN("tags"."name") DESC
     SQL
   end
 
@@ -53,11 +53,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => {:name => {:desc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
+      SELECT "properties".* FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY ar_sort_0 DESC NULLS LAST
+      ORDER BY MIN("tags"."name") DESC NULLS LAST
     SQL
   end
 
@@ -77,6 +77,17 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     names = Property.sort(:tags => {:name => :asc}).map(&:name)
     assert_equal names.uniq, names
     assert_equal ['multi', 'single'], names
+  end
+
+  # pluck/ids replace the select list — the ORDER BY references the
+  # aggregate expression directly (nothing in the select list), so the
+  # sort survives that.
+  test '::sort(:habtm_relationship => :column) keeps the sort when the select list is replaced (pluck, ids)' do
+    multi = Property.create!(name: 'multi', tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
+    single = Property.create!(name: 'single', tags: [Tag.create!(name: 'Mall')])
+
+    assert_equal [multi.id, single.id], Property.sort(:tags => {:name => :asc}).pluck(:id)
+    assert_equal [multi.id, single.id], Property.sort(:tags => {:name => :asc}).ids
   end
 
   test '::includes(:habtm_relationship).sort(:habtm_relationship => :column) returns each record once and preloads' do

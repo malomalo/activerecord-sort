@@ -63,7 +63,7 @@ empty collection are still included:
 
 ```ruby
 Property.sort(tags: :name).to_sql
-# => "SELECT properties.*, MIN(tags.name) AS min_tags_name FROM properties
+# => "SELECT properties.* FROM properties
 # => "   LEFT OUTER JOIN properties_tags ON properties_tags.property_id = properties.id
 # => "   LEFT OUTER JOIN tags ON tags.id = properties_tags.tag_id
 # => "   GROUP BY properties.id

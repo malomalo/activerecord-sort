@@ -25,7 +25,7 @@ class BelongsToSortTest < ActiveSupport::TestCase
     query = Address.sort(:property => {:id => :desc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "addresses".*, "properties"."id" AS ar_sort_0 FROM "addresses"
+      SELECT "addresses".* FROM "addresses"
       LEFT OUTER JOIN "properties" ON "properties"."id" = "addresses"."property_id"
       ORDER BY "properties"."id" DESC
     SQL
@@ -35,15 +35,15 @@ class BelongsToSortTest < ActiveSupport::TestCase
     query = Address.sort(:property => {:id => :desc}).distinct_on(:id)
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT DISTINCT ON ( "addresses"."id" ) "addresses".*, "properties"."id" AS ar_sort_0 FROM "addresses"
+      SELECT DISTINCT ON ( "addresses"."id" ) "addresses".* FROM "addresses"
       LEFT OUTER JOIN "properties" ON "properties"."id" = "addresses"."property_id"
       ORDER BY "properties"."id" DESC
     SQL
   end
 
-  # The sort column is selected under an ar_sort_* alias so it can't
-  # overwrite a same-named attribute on the base record — here the
-  # primary key.
+  # The sort column lives only in the ORDER BY, never the select list, so
+  # it can't overwrite a same-named attribute on the base record — here
+  # the primary key.
   test '::sort(:belongs_to_relationship => :column) does not clobber a same-named attribute on the base record' do
     property = Property.create!(name: 'home')
     with_property = Address.create!(name: 1, property: property)
@@ -52,7 +52,7 @@ class BelongsToSortTest < ActiveSupport::TestCase
     query = Address.sort(:property => {:id => {:asc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "addresses".*, "properties"."id" AS ar_sort_0 FROM "addresses"
+      SELECT "addresses".* FROM "addresses"
       LEFT OUTER JOIN "properties" ON "properties"."id" = "addresses"."property_id"
       ORDER BY "properties"."id" ASC NULLS LAST
     SQL
