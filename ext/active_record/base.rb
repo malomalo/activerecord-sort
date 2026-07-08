@@ -120,19 +120,28 @@ module ActiveRecord
             # the ORDER BY uses the aggregate expression rather than its alias
             # so readers that replace the select list (pluck, ids) keep the
             # sort.
-            # Separate Min nodes for the select and the order: on ActiveRecord
-            # <= 8.0, Function#as mutates the node (sets its alias and returns
-            # self), so a shared node would leak `AS min_...` into the ORDER BY.
+            #
+            # TODO: When version <= 8.0 dropped move to remove alias_node
+            # and move to
+            #   column = column.minimum.as("ar_sort_#{order_columns.size}")
+            #   order_columns.push(column)
+            #   ...
+            #   and use column.right where alias_node was used
+            #
+            # Build the As node explicitly rather than via Function#as: on
+            # ActiveRecord <= 8.0, Function#as mutates the receiver and
+            # returns the Min node itself (not an Arel::Nodes::As), so its
+            # return value can't be relied on across supported versions.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            column = column.minimum.as("ar_sort_#{order_columns.size}")
-            order_columns.push(column)
+            alias_node = Arel::Nodes::SqlLiteral.new("ar_sort_#{order_columns.size}")
+            order_columns.push(Arel::Nodes::As.new(column.minimum, alias_node))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             order = if direction == :desc
-              Arel::Nodes::Descending.new(column.right, nulls)
+              Arel::Nodes::Descending.new(alias_node, nulls)
             else
-              Arel::Nodes::Ascending.new(column.right, nulls)
+              Arel::Nodes::Ascending.new(alias_node, nulls)
             end
 
             resource = resource.left_outer_joins(relation.name)
