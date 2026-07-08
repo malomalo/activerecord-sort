@@ -13,6 +13,14 @@ require 'active_record/sort'
 require 'faker'
 require 'webmock'
 
+# sunstone's predicate_builder patch calls TableMetadata#associated_with?,
+# which ActiveRecord 8.1 renamed to #associated_with — without the alias any
+# nested-hash where (e.g. HABTM writes and preloads) raises NoMethodError.
+if !ActiveRecord::TableMetadata.method_defined?(:associated_with?) &&
+    ActiveRecord::TableMetadata.method_defined?(:associated_with)
+  ActiveRecord::TableMetadata.send(:alias_method, :associated_with?, :associated_with)
+end
+
 WebMock.enable!
 WebMock.disable_net_connect!
 

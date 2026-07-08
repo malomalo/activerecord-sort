@@ -79,24 +79,34 @@ class SortRelationTest < ActiveSupport::TestCase
   end
 
   test '::sort(:habtm_relationship => :column) sorts by first member and keeps empty collections' do
-    zoo = Tag.create!(name: 'Zoo')
-    apex = Tag.create!(name: 'Apex')
-    mall = Tag.create!(name: 'Mall')
-
-    multi = Property.create!(name: 'multi')
-    single = Property.create!(name: 'single')
+    Property.create!(name: 'multi', tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
+    Property.create!(name: 'single', tags: [Tag.create!(name: 'Mall')])
     Property.create!(name: 'untagged')
-
-    # Join rows inserted directly: the sunstone test adapter's predicate
-    # builder patch breaks HABTM association writes on this ActiveRecord
-    # version, and only the read path is under test here.
-    Property.connection.execute(<<-SQL)
-      INSERT INTO properties_tags (property_id, tag_id) VALUES
-      (#{multi.id}, #{zoo.id}), (#{multi.id}, #{apex.id}), (#{single.id}, #{mall.id})
-    SQL
 
     assert_equal ['multi', 'single', 'untagged'], Property.sort(:tags => {:name => {:asc => :nulls_last}}).map(&:name)
     assert_equal ['single', 'multi', 'untagged'], Property.sort(:tags => {:name => {:desc => :nulls_last}}).map(&:name)
+  end
+
+  test '::sort(:habtm_relationship => :column) returns each record once despite multiple members' do
+    Property.create!(name: 'multi', tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
+    Property.create!(name: 'single', tags: [Tag.create!(name: 'Mall')])
+
+    names = Property.sort(:tags => {:name => :asc}).map(&:name)
+    assert_equal names.uniq, names
+    assert_equal ['multi', 'single'], names
+  end
+
+  test '::includes(:habtm_relationship).sort(:habtm_relationship => :column) returns each record once and preloads' do
+    Property.create!(name: 'multi', tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
+    Property.create!(name: 'single', tags: [Tag.create!(name: 'Mall')])
+
+    records = Property.includes(:tags).sort(:tags => {:name => :asc}).to_a
+    names = records.map(&:name)
+    assert_equal names.uniq, names
+    assert_equal ['multi', 'single'], names
+
+    assert records.all? { |record| record.association(:tags).loaded? }
+    assert_equal ['Apex', 'Zoo'], records.first.tags.map(&:name).sort
   end
 
   test '::sort(:belongs_to_relationship => {:column => :desc})' do
