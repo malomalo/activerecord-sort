@@ -149,10 +149,10 @@ module ActiveRecord
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
-            if direction == :asc
-              order = Arel::Nodes::Ascending.new(column, nulls)
-            else
+            if direction == :desc
               order = Arel::Nodes::Descending.new(column, nulls)
+            else
+              order = Arel::Nodes::Ascending.new(column, nulls)
             end
 
             resource = resource.left_outer_joins(relation.name)

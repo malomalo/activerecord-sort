@@ -13,7 +13,6 @@ $LOAD_PATH << File.expand_path('../lib', __FILE__)
 
 require "minitest/autorun"
 require 'minitest/reporters'
-require 'factory_bot'
 require 'sunstone'
 require 'active_record/sort'
 require 'faker'
@@ -31,17 +30,11 @@ end
 WebMock.enable!
 WebMock.disable_net_connect!
 
-FactoryBot.find_definitions
-
-# Setup the test db
 ActiveSupport.test_order = :random
-require File.expand_path('../database', __FILE__)
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 class ActiveSupport::TestCase
-  include ActiveRecord::TestFixtures
-  include FactoryBot::Syntax::Methods
   include WebMock::API
 
   def deep_transform_query(object)
@@ -120,4 +113,37 @@ class ActiveSupport::TestCase
       end
   end
 
+
+  ## Setup Schema per test suite
+  def self.schema(&block)
+    self.class_variable_set(:@@schema, block)
+  end
+
+  set_callback(:setup, :before) do
+    if !self.class.class_variable_defined?(:@@suite_setup_run) && self.class.class_variable_defined?(:@@schema)
+      ActiveRecord::Base.establish_connection({
+        adapter:  "postgresql",
+        database: "activerecord-sort-test",
+        encoding: "utf8"
+      })
+
+      db_config = ActiveRecord::Base.connection_db_config
+      db_tasks = ActiveRecord::Tasks::PostgreSQLDatabaseTasks.new(db_config)
+      db_tasks.purge
+
+      ActiveRecord::Migration.suppress_messages do
+        ActiveRecord::Schema.define(&self.class.class_variable_get(:@@schema))
+        ActiveRecord::Migration.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S'").each_row do |row|
+          ActiveRecord::Migration.execute("ALTER SEQUENCE #{row[0]} RESTART WITH #{rand(50_000)}")
+          # "INSERT INTO SQLITE_SEQUENCE (name,seq) VALUES ('#{table}', #{rand(50_000)})" for sqlite
+        end
+      end
+    else
+      connection = ActiveRecord::Base.connection
+      tables = connection.tables - %w[schema_migrations ar_internal_metadata]
+      connection.execute("TRUNCATE #{tables.map { |t| connection.quote_table_name(t) }.join(', ')} CONTINUE IDENTITY CASCADE")
+    end
+    self.class.class_variable_set(:@@suite_setup_run, true)
+  end
+  
 end

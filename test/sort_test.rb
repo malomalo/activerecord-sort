@@ -2,6 +2,16 @@ require 'test_helper'
 
 class SortTest < ActiveSupport::TestCase
 
+  schema do
+    create_table "properties", force: :cascade do |t|
+      t.string   "name",                 limit: 255
+    end
+  end
+  
+  class Property < ActiveRecord::Base
+    has_many :addresses
+  end
+  
   test '::sort(nil)' do
     assert_equal('SELECT "properties".* FROM "properties"', Property.sort(nil).to_sql)
   end
