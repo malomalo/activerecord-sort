@@ -24,11 +24,12 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency 'minitest'
   spec.add_development_dependency 'minitest-reporters'
-  spec.add_development_dependency "simplecov"
+  spec.add_development_dependency "simplecov", '1.0.0.rc5'
   spec.add_development_dependency "factory_bot"
   spec.add_development_dependency "faker"
   spec.add_development_dependency "sunstone", '>= 6.1.0.2'
   spec.add_development_dependency "webmock"
+  spec.add_development_dependency "debug"
   # spec.add_development_dependency 'sdoc',                '~> 0.4'
   # spec.add_development_dependency 'sdoc-templates-42floors', '~> 0.3'
 end

@@ -1,5 +1,11 @@
 require 'simplecov'
-SimpleCov.start
+SimpleCov.start do
+  skip "/test/"
+  skip "/lib/active_record/sort/version"
+  cover "{ext,lib}/**/*.rb"
+  enable_coverage :branch
+  # disable_coverage :line
+end
 
 # To make testing/debugging easier, test within this source tree versus an
 # installed gem
@@ -12,6 +18,7 @@ require 'sunstone'
 require 'active_record/sort'
 require 'faker'
 require 'webmock'
+require 'debug'
 
 # sunstone's predicate_builder patch calls TableMetadata#associated_with?,
 # which ActiveRecord 8.1 renamed to #associated_with — without the alias any

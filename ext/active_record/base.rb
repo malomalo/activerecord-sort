@@ -68,8 +68,7 @@ module ActiveRecord
         options = [options] if !options.is_a?(Array)
 
         options.each do |order|
-          order = Array(order)
-          order.each do |column, options|
+          Array(order).each do |column, options|
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column], relation.name)
             order_columns.push(column)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
@@ -100,13 +99,12 @@ module ActiveRecord
         end
       elsif relation.macro == :has_and_belongs_to_many
         options = [options] if !options.is_a?(Array)
-
+        
         options.each do |order|
-          order = Array(order)
-          order.each do |column, options|
+          Array(order).each do |column_name, options|
             # LEFT JOIN the collection and order by the MIN of the requested
-            # column, grouped by this table's primary key, so rows don't fan
-            # out and records with an empty collection still appear:
+            # column, grouped by this table's primary key, so rows don't fan /
+            # duplicate and records with an empty collection still appear:
             #
             #   SELECT properties.*, MIN(tags.name) AS min_tags_name
             #   FROM properties
@@ -123,16 +121,16 @@ module ActiveRecord
             # Separate Min nodes for the select and the order: on ActiveRecord
             # <= 8.0, Function#as mutates the node (sets its alias and returns
             # self), so a shared node would leak `AS min_...` into the ORDER BY.
-            column_attribute = relation.klass.arel_table[column]
-            order_columns.push(Arel::Nodes::Min.new([column_attribute]).as(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column}")))
-            aggregation = Arel::Nodes::Min.new([column_attribute])
+            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
+            column = column.minimum.as("min_#{relation.name}_#{column_name}")
+            order_columns.push(column)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             order = if direction == :desc
-              Arel::Nodes::Descending.new(aggregation, nulls)
+              Arel::Nodes::Descending.new(column.right, nulls)
             else
-              Arel::Nodes::Ascending.new(aggregation, nulls)
+              Arel::Nodes::Ascending.new(column.right, nulls)
             end
 
             resource = resource.left_outer_joins(relation.name)

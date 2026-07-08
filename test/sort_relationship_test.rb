@@ -50,7 +50,7 @@ class SortRelationTest < ActiveSupport::TestCase
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY MIN("tags"."name") ASC
+      ORDER BY min_tags_name ASC
     SQL
   end
 
@@ -62,7 +62,7 @@ class SortRelationTest < ActiveSupport::TestCase
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY MIN("tags"."name") DESC
+      ORDER BY min_tags_name DESC
     SQL
   end
 
@@ -74,7 +74,7 @@ class SortRelationTest < ActiveSupport::TestCase
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY MIN("tags"."name") DESC NULLS LAST
+      ORDER BY min_tags_name DESC NULLS LAST
     SQL
   end
 
