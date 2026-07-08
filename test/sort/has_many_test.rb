@@ -25,7 +25,7 @@ class HasManySortTest < ActiveSupport::TestCase
     query = Property.sort(:addresses => :id)
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "addresses"."id" FROM "properties"
+      SELECT "properties".*, "addresses"."id" AS ar_sort_0 FROM "properties"
       INNER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
       ORDER BY "addresses"."id" ASC
     SQL
@@ -35,7 +35,7 @@ class HasManySortTest < ActiveSupport::TestCase
     query = Property.sort(:addresses => {:id => :desc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "addresses"."id" FROM "properties"
+      SELECT "properties".*, "addresses"."id" AS ar_sort_0 FROM "properties"
       INNER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
       ORDER BY "addresses"."id" DESC
     SQL
@@ -45,7 +45,7 @@ class HasManySortTest < ActiveSupport::TestCase
     query = Property.sort(:addresses => {:id => {:asc => :nulls_first}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "addresses"."id" FROM "properties"
+      SELECT "properties".*, "addresses"."id" AS ar_sort_0 FROM "properties"
       INNER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
       ORDER BY "addresses"."id" ASC NULLS FIRST
     SQL
@@ -55,7 +55,7 @@ class HasManySortTest < ActiveSupport::TestCase
     query = Property.sort(:addresses => {:id => {:desc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, "addresses"."id" FROM "properties"
+      SELECT "properties".*, "addresses"."id" AS ar_sort_0 FROM "properties"
       INNER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
       ORDER BY "addresses"."id" DESC NULLS LAST
     SQL

@@ -29,11 +29,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => :name)
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS min_tags_name FROM "properties"
+      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY min_tags_name ASC
+      ORDER BY ar_sort_0 ASC
     SQL
   end
 
@@ -41,11 +41,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => {:name => :desc})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS min_tags_name FROM "properties"
+      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY min_tags_name DESC
+      ORDER BY ar_sort_0 DESC
     SQL
   end
 
@@ -53,11 +53,11 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     query = Property.sort(:tags => {:name => {:desc => :nulls_last}})
 
     assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-      SELECT "properties".*, MIN("tags"."name") AS min_tags_name FROM "properties"
+      SELECT "properties".*, MIN("tags"."name") AS ar_sort_0 FROM "properties"
       LEFT OUTER JOIN "properties_tags" ON "properties_tags"."property_id" = "properties"."id"
       LEFT OUTER JOIN "tags" ON "tags"."id" = "properties_tags"."tag_id"
       GROUP BY "properties"."id"
-      ORDER BY min_tags_name DESC NULLS LAST
+      ORDER BY ar_sort_0 DESC NULLS LAST
     SQL
   end
 

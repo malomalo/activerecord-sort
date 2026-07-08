@@ -68,9 +68,11 @@ module ActiveRecord
         options = [options] if !options.is_a?(Array)
 
         options.each do |order|
-          Array(order).each do |column, options|
-            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column], relation.name)
-            order_columns.push(column)
+          Array(order).each do |column_name, options|
+            # Alias the select column (ar_sort_*) so it can't overwrite a
+            # same-named attribute on this table when records are loaded.
+            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
+            order_columns.push(column.as("ar_sort_#{order_columns.size}"))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
@@ -106,7 +108,7 @@ module ActiveRecord
             # column, grouped by this table's primary key, so rows don't fan /
             # duplicate and records with an empty collection still appear:
             #
-            #   SELECT properties.*, MIN(tags.name) AS min_tags_name
+            #   SELECT properties.*, MIN(tags.name) AS ar_sort_0
             #   FROM properties
             #   LEFT JOIN properties_tags ON properties_tags.property_id = properties.id
             #   LEFT JOIN tags ON tags.id = properties_tags.tag_id
@@ -122,7 +124,7 @@ module ActiveRecord
             # <= 8.0, Function#as mutates the node (sets its alias and returns
             # self), so a shared node would leak `AS min_...` into the ORDER BY.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            column = column.minimum.as("min_#{relation.name}_#{column_name}")
+            column = column.minimum.as("ar_sort_#{order_columns.size}")
             order_columns.push(column)
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
@@ -144,8 +146,10 @@ module ActiveRecord
         options.each do |order|
           order = Array(order)
           order.each do |column, options|
+            # Alias the select column (ar_sort_*) so it can't overwrite a
+            # same-named attribute on this table when records are loaded.
             column = relation.klass.arel_table[column]
-            order_columns.push(column)
+            order_columns.push(column.as("ar_sort_#{order_columns.size}"))
             direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
 
             nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
