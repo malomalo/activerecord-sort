@@ -79,6 +79,12 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     assert_equal ['multi', 'single'], names
   end
 
+  test '::sort(:habtm_relationship => {:column => :invalid}) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Property.sort(tags: {name: :invalid})
+    end
+  end
+
   # pluck/ids replace the select list — the ORDER BY references the
   # aggregate expression directly (nothing in the select list), so the
   # sort survives that.

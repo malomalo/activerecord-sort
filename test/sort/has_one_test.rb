@@ -61,6 +61,22 @@ class HasOneSortTest < ActiveSupport::TestCase
     SQL
   end
 
+  test '::sort(:has_one_relationship => {:column => ""}) defaults to ascending' do
+    query = Property.sort(deed: {name: ''})
+
+    assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
+      SELECT "properties".* FROM "properties"
+      LEFT OUTER JOIN "deeds" ON "deeds"."property_id" = "properties"."id"
+      ORDER BY "deeds"."name" ASC
+    SQL
+  end
+
+  test '::sort(:has_one_relationship => {:column => :invalid}) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Property.sort(deed: {name: :invalid})
+    end
+  end
+
   test '::sort(:has_one_relationship => [columns]) sorts by multiple columns' do
     query = Property.sort(:deed => [{:name => :asc}, {:property_id => :desc}])
 

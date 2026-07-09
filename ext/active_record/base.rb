@@ -41,14 +41,26 @@ module ActiveRecord
       self.order(Arel::Nodes::RandomOrdering.new)
     end
 
+    # Normalizes per-column sort options into [direction, nulls]. A blank
+    # direction — a bare column, or "" as query params often produce —
+    # means :asc.
     # TODO: probably don't need to cast to sym
-    def sort_for_column(column, options)
-      direction = (options.is_a?(Hash) || options.class.name == "ActionController::Parameters" ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+    def sort_direction_and_nulls(options)
+      if options.is_a?(Hash) || options.class.name == "ActionController::Parameters"
+        [options.keys.first.to_sym, options.values.first.to_sym]
+      elsif options.blank?
+        [:asc, nil]
+      else
+        [options.to_s.downcase.to_sym, nil]
+      end
+    end
 
-      nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
+    def sort_for_column(column, options)
+      direction, nulls = sort_direction_and_nulls(options)
+
       if direction == :desc
         self.order(Arel::Nodes::Descending.new(column, nulls))
-      elsif direction == :asc || direction == :''
+      elsif direction == :asc
         self.order(Arel::Nodes::Ascending.new(column, nulls))
       else
         raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
@@ -71,9 +83,8 @@ module ActiveRecord
         options.each do |order|
           Array(order).each do |column_name, options|
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+            direction, nulls = sort_direction_and_nulls(options)
 
-            nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             if direction == :desc
               # aggregation = Arel::Nodes::Max.new([column], "max_#{relation.name}_#{column.name}")
               # order = Arel::Nodes::Descending.new(Arel::Nodes::SqlLiteral.new("max_#{relation.name}_#{column.name}"), nulls)
@@ -86,14 +97,16 @@ module ActiveRecord
               # resource = resource.select(aggregation)
               # resource = resource.order(order)
               resource = resource.order(Arel::Nodes::Descending.new(column, nulls))
-            else
               # aggregation = Arel::Nodes::Min.new([column], "min_#{relation.name}_#{column.name}")
               order = Arel::Nodes::Ascending.new(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column.name}"), nulls)
 
+            elsif direction == :asc
               resource = resource.joins(relation.name)
               # resource = resource.select(aggregation)
               # resource = resource.order(order)
               resource = resource.order(Arel::Nodes::Ascending.new(column, nulls))
+            else
+              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
             end
           end
         end
@@ -116,13 +129,14 @@ module ActiveRecord
             # MIN is the sort key for both directions so toggling asc/desc
             # reverses the list instead of re-keying multi-value records.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+            direction, nulls = sort_direction_and_nulls(options)
 
-            nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             order = if direction == :desc
               Arel::Nodes::Descending.new(column.minimum, nulls)
-            else
+            elsif direction == :asc
               Arel::Nodes::Ascending.new(column.minimum, nulls)
+            else
+              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
             end
 
             resource = resource.left_outer_joins(relation.name)
@@ -137,13 +151,14 @@ module ActiveRecord
           order = Array(order)
           order.each do |column, options|
             column = relation.klass.arel_table[column]
-            direction = (options.is_a?(Hash) ? options.keys.first.to_sym : options.to_s.downcase.to_sym)
+            direction, nulls = sort_direction_and_nulls(options)
 
-            nulls = (options.is_a?(Hash) ? options.values.first.to_sym : nil)
             if direction == :desc
               order = Arel::Nodes::Descending.new(column, nulls)
-            else
+            elsif direction == :asc
               order = Arel::Nodes::Ascending.new(column, nulls)
+            else
+              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
             end
 
             resource = resource.left_outer_joins(relation.name)

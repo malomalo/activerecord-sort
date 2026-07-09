@@ -41,6 +41,12 @@ class BelongsToSortTest < ActiveSupport::TestCase
     SQL
   end
 
+  test '::sort(:belongs_to_relationship => {:column => :invalid}) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Address.sort(property: {id: :invalid})
+    end
+  end
+
   # The sort column lives only in the ORDER BY, never the select list, so
   # it can't overwrite a same-named attribute on the base record — here
   # the primary key.

@@ -61,4 +61,10 @@ class HasManySortTest < ActiveSupport::TestCase
     SQL
   end
 
+  test '::sort(:has_many_relationship => {:column => :invalid}) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Property.sort(addresses: {id: :invalid})
+    end
+  end
+
 end
