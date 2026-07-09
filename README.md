@@ -66,3 +66,8 @@ Property.sort(tags: :name).to_sql # has_and_belongs_to_many
 # => "   GROUP BY properties.id
 # => "   ORDER BY MIN(tags.name) ASC"
 ```
+
+A relation sort is order-only — it never adds or removes records — so
+aggregates on a sorted relation (`count`, `sum`, `average`, `minimum`,
+`maximum`) are computed over the records themselves, not the sort's
+grouped and joined rows.

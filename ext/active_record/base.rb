@@ -137,8 +137,37 @@ module ActiveRecord
         end
       end
 
-      resource.group(klass.arel_table[klass.primary_key])
+      resource = resource.group(klass.arel_table[klass.primary_key])
+      # Tag the relation for the count override below. Chained relations
+      # are built with clone, which copies instance variables, so the tag
+      # survives further chaining.
+      resource.instance_variable_set(:@sorted_by_relation, true)
+      resource
     end
 
   end
+
+  module Sort
+    module Calculations
+      # sort_for_relation groups by the primary key and LEFT JOINs the
+      # relation, so aggregates would see grouped, fanned-out rows: count
+      # returns a per-group Hash, and sum/average weigh a record once per
+      # collection member. But a relation sort is order-only — records are
+      # never added or removed — so every aggregate has a well-defined
+      # answer: compute it over the base table restricted to the sorted
+      # relation's (distinct) primary keys. User joins and conditions still
+      # apply inside the subquery, and a user-added group falls through to
+      # the standard grouped behavior.
+      def calculate(operation, column_name)
+        if @sorted_by_relation && group_values == [klass.arel_table[klass.primary_key]]
+          klass.where(klass.primary_key => unscope(:group, :order, :select).select(klass.primary_key))
+               .calculate(operation, column_name)
+        else
+          super
+        end
+      end
+    end
+  end
 end
+
+ActiveRecord::Relation.prepend(ActiveRecord::Sort::Calculations)
