@@ -119,6 +119,10 @@ class ActiveSupport::TestCase
     self.class_variable_set(:@@schema, block)
   end
 
+  def self.fixtures(&block)
+    self.class_variable_set(:@@fixtures, block)
+  end
+
   set_callback(:setup, :before) do
     if !self.class.class_variable_defined?(:@@suite_setup_run) && self.class.class_variable_defined?(:@@schema)
       ActiveRecord::Base.establish_connection({
@@ -144,6 +148,10 @@ class ActiveSupport::TestCase
       connection.execute("TRUNCATE #{tables.map { |t| connection.quote_table_name(t) }.join(', ')} CONTINUE IDENTITY CASCADE")
     end
     self.class.class_variable_set(:@@suite_setup_run, true)
+
+    if self.class.class_variable_defined?(:@@fixtures)
+      self.class.class_variable_get(:@@fixtures).call
+    end
   end
   
 end

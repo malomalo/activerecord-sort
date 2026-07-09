@@ -77,47 +77,15 @@ module ActiveRecord
       resource = self
       relation = reflect_on_association(relation)
 
-      if relation.macro == :has_many
+      if relation.macro == :has_many || relation.macro == :has_and_belongs_to_many
         options = [options] if !options.is_a?(Array)
 
         options.each do |order|
           Array(order).each do |column_name, options|
-            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            direction, nulls = sort_direction_and_nulls(options)
-
-            if direction == :desc
-              # aggregation = Arel::Nodes::Max.new([column], "max_#{relation.name}_#{column.name}")
-              # order = Arel::Nodes::Descending.new(Arel::Nodes::SqlLiteral.new("max_#{relation.name}_#{column.name}"), nulls)
-
-              if relation.options[:through]
-                resource = resource.joins(relation.options[:through] => relation.source_reflection_name)
-              else
-                resource = resource.joins(relation.name)
-              end
-              # resource = resource.select(aggregation)
-              # resource = resource.order(order)
-              resource = resource.order(Arel::Nodes::Descending.new(column, nulls))
-              # aggregation = Arel::Nodes::Min.new([column], "min_#{relation.name}_#{column.name}")
-              order = Arel::Nodes::Ascending.new(Arel::Nodes::SqlLiteral.new("min_#{relation.name}_#{column.name}"), nulls)
-
-            elsif direction == :asc
-              resource = resource.joins(relation.name)
-              # resource = resource.select(aggregation)
-              # resource = resource.order(order)
-              resource = resource.order(Arel::Nodes::Ascending.new(column, nulls))
-            else
-              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
-            end
-          end
-        end
-      elsif relation.macro == :has_and_belongs_to_many
-        options = [options] if !options.is_a?(Array)
-        
-        options.each do |order|
-          Array(order).each do |column_name, options|
-            # LEFT JOIN the collection and order by the MIN of the requested
-            # column, grouped by this table's primary key, so rows don't fan /
-            # duplicate and records with an empty collection still appear:
+            # LEFT JOIN the collection, group by this table's primary key —
+            # so rows don't fan / duplicate and records with an empty
+            # collection still appear — and order by an aggregate of the
+            # requested column:
             #
             #   SELECT properties.*
             #   FROM properties
@@ -126,13 +94,16 @@ module ActiveRecord
             #   GROUP BY properties.id
             #   ORDER BY MIN(tags.name) ASC
             #
-            # MIN is the sort key for both directions so toggling asc/desc
-            # reverses the list instead of re-keying multi-value records.
+            # Ascending keys each record by its smallest member (MIN),
+            # descending by its largest (MAX) — the member you'd expect to
+            # see first in that direction. Toggling asc/desc therefore
+            # re-keys multi-value records rather than strictly reversing
+            # the list.
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
             direction, nulls = sort_direction_and_nulls(options)
 
             order = if direction == :desc
-              Arel::Nodes::Descending.new(column.minimum, nulls)
+              Arel::Nodes::Descending.new(column.maximum, nulls)
             elsif direction == :asc
               Arel::Nodes::Ascending.new(column.minimum, nulls)
             else
@@ -140,7 +111,6 @@ module ActiveRecord
             end
 
             resource = resource.left_outer_joins(relation.name)
-            resource = resource.group(klass.arel_table[klass.primary_key])
             resource = resource.order(order)
           end
         end
@@ -154,9 +124,9 @@ module ActiveRecord
             direction, nulls = sort_direction_and_nulls(options)
 
             if direction == :desc
-              order = Arel::Nodes::Descending.new(column, nulls)
+              order = Arel::Nodes::Descending.new(column.maximum, nulls)
             elsif direction == :asc
-              order = Arel::Nodes::Ascending.new(column, nulls)
+              order = Arel::Nodes::Ascending.new(column.minimum, nulls)
             else
               raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
             end
@@ -167,7 +137,7 @@ module ActiveRecord
         end
       end
 
-      resource
+      resource.group(klass.arel_table[klass.primary_key])
     end
 
   end

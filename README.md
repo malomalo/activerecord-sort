@@ -40,29 +40,26 @@ Property.sort(id: {asc: :nulls_last})
 # => "...ORDER BY properties.id ASC NULLS LAST"
 ```
 
-It can also sort on relations:
+It can also sort on relations. A relation sort groups by the sorted table's
+primary key — so each record appears once and records with no associated
+rows are still included — and orders by an aggregate of the requested
+column: `MIN` ascending or `MAX` descending, keying each record by the
+member you'd expect to see first in that direction:
 
 ```ruby
 Property.sort(addresses: :id).to_sql
-# => "...INNER JOIN addresses ON addresses.property_id = properties.id
-# => "   ORDER BY addresses.id ASC"
+# => "SELECT properties.* FROM properties
+# => "   LEFT OUTER JOIN addresses ON addresses.property_id = properties.id
+# => "   GROUP BY properties.id
+# => "   ORDER BY MIN(addresses.id) ASC"
 
 Property.sort(addresses: {id: :desc}).to_sql
-# => "...INNER JOIN addresses ON addresses.property_id = properties.id
-# => "   ORDER BY addresses.id DESC"
+# => "...ORDER BY MAX(addresses.id) DESC"
 
-Property.sort(addresses: {id: {asc: :nulls_frist}}).to_sql
-# => "...INNER JOIN addresses ON addresses.property_id = properties.id
-# => "   ORDER BY addresses.id ASC NULLS FIRST"
-```
+Property.sort(addresses: {id: {asc: :nulls_first}}).to_sql
+# => "...ORDER BY MIN(addresses.id) ASC NULLS FIRST"
 
-A `has_and_belongs_to_many` relation sorts by the aggregate `MIN` of the
-requested column, grouped by the sorted table's primary key — so each record
-appears once (keyed by its first member alphabetically) and records with an
-empty collection are still included:
-
-```ruby
-Property.sort(tags: :name).to_sql
+Property.sort(tags: :name).to_sql # has_and_belongs_to_many
 # => "SELECT properties.* FROM properties
 # => "   LEFT OUTER JOIN properties_tags ON properties_tags.property_id = properties.id
 # => "   LEFT OUTER JOIN tags ON tags.id = properties_tags.tag_id
