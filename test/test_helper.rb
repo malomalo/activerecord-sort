@@ -142,16 +142,28 @@ class ActiveSupport::TestCase
           # "INSERT INTO SQLITE_SEQUENCE (name,seq) VALUES ('#{table}', #{rand(50_000)})" for sqlite
         end
       end
-    else
-      connection = ActiveRecord::Base.connection
-      tables = connection.tables - %w[schema_migrations ar_internal_metadata]
-      connection.execute("TRUNCATE #{tables.map { |t| connection.quote_table_name(t) }.join(', ')} CONTINUE IDENTITY CASCADE")
+    # Use this if not using tranasctional test below
+    # else
+    #   connection = ActiveRecord::Base.connection
+    #   tables = connection.tables - %w[schema_migrations ar_internal_metadata]
+    #   connection.execute("TRUNCATE #{tables.map { |t| connection.quote_table_name(t) }.join(', ')} CONTINUE IDENTITY CASCADE")
     end
     self.class.class_variable_set(:@@suite_setup_run, true)
+
+    # Each test (fixtures included) runs inside a transaction rolled back
+    # in teardown — much cheaper than truncating every table between
+    # tests. joinable: false keeps transactions opened by the code under
+    # test on savepoints so their commits/rollbacks stay contained.
+    ActiveRecord::Base.connection.begin_transaction(joinable: false)
 
     if self.class.class_variable_defined?(:@@fixtures)
       self.class.class_variable_get(:@@fixtures).call
     end
   end
-  
+
+  set_callback(:teardown, :after) do
+    connection = ActiveRecord::Base.connection
+    connection.rollback_transaction if connection.transaction_open?
+  end
+
 end
