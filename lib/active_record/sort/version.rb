@@ -1,5 +1,5 @@
 module ActiveRecord
   module Sort
-    VERSION = '6.1.0.1'
+    VERSION = '10.0.0.rc1'
   end
 end

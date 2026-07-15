@@ -13,10 +13,11 @@ Gem::Specification.new do |spec|
   spec.extra_rdoc_files = %w(README.md)
   spec.rdoc_options.concat ['--main', 'README.md']
 
-  spec.files          = Dir["LICENSE", "README.rdoc", "lib/**/*", "ext/**/*"]
+  spec.files          = Dir["LICENSE", "README.md", "CHANGELOG.md", "lib/**/*", "ext/**/*"]
   spec.require_paths  = ["lib"]
+  spec.required_ruby_version = '>= 3.3'
 
-  spec.add_runtime_dependency 'activerecord', '>= 6.1.0'
+  spec.add_runtime_dependency 'activerecord', '>= 7.1'
   spec.add_runtime_dependency 'arel-extensions', '>= 6.1.0'
 
   spec.add_development_dependency 'pg'
