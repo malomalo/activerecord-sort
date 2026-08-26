@@ -13,7 +13,14 @@ module ActiveRecord
     # :listings => :id
     # :listings => {:id => {:asc => :nulls_first}}
     # :random
-    def sort(*ordering)
+    def sort(*ordering, &block)
+      # With no arguments, fall back to Ruby's Enumerable#sort so code (and
+      # Rails' own test suite) that calls `relation.sort` expecting Ruby
+      # semantics keeps working. The ordering DSL only applies when given
+      # arguments; `sort(nil)`/`sort([])` still return the relation for
+      # chaining.
+      return super(&block) if ordering.empty?
+
       resource = all
       ordering.compact!
       ordering.flatten!
