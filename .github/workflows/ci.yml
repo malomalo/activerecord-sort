@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: ActiveRecord::Sort Test
@@ -55,6 +59,7 @@ jobs:
     name: ActiveRecord PostgresQL Test
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         ruby-version:
           - 3.4
@@ -127,6 +132,7 @@ jobs:
     name: ActiveRecord SQLite Test
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         ruby-version:
           - 3.4
@@ -189,6 +195,7 @@ jobs:
     name: ActiveRecord MySQL Test
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         ruby-version:
           - 3.4
