@@ -32,8 +32,9 @@ jobs:
         run: |
           sudo apt-get -y --purge remove $(sudo apt list --installed | grep postgresql | awk '{print $1}')
           sudo apt-get install curl ca-certificates gnupg
-          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo install -d /etc/apt/keyrings
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
           sudo apt-get -y install postgresql-${{ matrix.postgres-version }}-postgis-3
           sudo systemctl start postgresql@${{ matrix.postgres-version }}-main.service
@@ -74,8 +75,9 @@ jobs:
         run: |
           sudo apt-get -y --purge remove $(sudo apt list --installed | grep postgresql | awk '{print $1}')
           sudo apt-get install curl ca-certificates gnupg
-          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo install -d /etc/apt/keyrings
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
           sudo apt-get -y install postgresql-${{ matrix.postgres-version }}-postgis-3
           sudo systemctl start postgresql@${{ matrix.postgres-version }}-main.service
@@ -107,8 +109,10 @@ jobs:
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
           sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "require 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
 
       - name: Bundle
@@ -158,8 +162,10 @@ jobs:
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
           sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "require 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
 
       - name: Bundle
@@ -218,8 +224,10 @@ jobs:
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
           sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "require 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
 
       - name: Bundle
