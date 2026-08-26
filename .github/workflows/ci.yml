@@ -14,16 +14,14 @@ jobs:
       fail-fast: false
       matrix:
         rails-version:
-          - 7.1
-          - 7.2
           - 8.0
           - 8.1
         ruby-version:
           - 3.3
           - 3.4
-          - 4.0.0-preview2
+          - 4.0
         postgres-version:
-          - 17
+          - 18
 
     steps:
       - name: Install Postgresql
@@ -40,18 +38,11 @@ jobs:
           sudo -u postgres createuser runner --superuser
           sudo -u postgres psql -c "ALTER USER runner WITH PASSWORD 'runner';"
 
-      - uses: actions/checkout@v4
-
-      - name: Add logger for Ruby 3.5 (no longer bundled gem, drop when rails adds)
-        run: |
-          echo ""  >> Gemfile
-          echo 'gem "logger"' >> Gemfile
-          echo ""  >> Gemfile
-          echo 'gem "benchmark"' >> Gemfile
+      - uses: actions/checkout@v7
 
       - run: |
           echo ""  >> Gemfile
-          echo 'gem "rails", "${{ matrix.rails-version }}"' >> Gemfile
+          echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -68,15 +59,10 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - 7.2.3
-          - 8.0.4
-          - 8.1.1
+          - 8.0
+          - 8.1
         postgres-version:
-          - 17
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
-            postgres-version: '17'
+          - 18
 
     steps:
       - name: Install Postgresql
@@ -93,7 +79,7 @@ jobs:
           sudo -u postgres createuser runner --superuser
           sudo -u postgres psql -c "ALTER USER runner WITH PASSWORD 'runner';"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -102,7 +88,15 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
@@ -137,28 +131,28 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - 7.2.3
-          - 8.0.4
-          - 8.1.1
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
+          - 8.0
+          - 8.1
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.0
-          
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
-    
+
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
@@ -199,12 +193,8 @@ jobs:
         ruby-version:
           - 3.4
         rails-version:
-          - 7.2.3
-          - 8.0.4
-          - 8.1.1
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
+          - 8.0
+          - 8.1
 
     steps:
       - name: Install MySQL
@@ -213,7 +203,7 @@ jobs:
           mysql -uroot -proot -e "CREATE USER 'rails'@'%';"
           mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON *.* TO 'rails'@'%' WITH GRANT OPTION;"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -222,7 +212,15 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile

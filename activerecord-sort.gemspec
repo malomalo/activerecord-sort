@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.files          = Dir["LICENSE", "README.rdoc", "lib/**/*", "ext/**/*"]
   spec.require_paths  = ["lib"]
 
-  spec.add_runtime_dependency 'activerecord', '>= 6.1.0'
+  spec.add_runtime_dependency 'activerecord', '>= 8.0.0'
   spec.add_runtime_dependency 'arel-extensions', '>= 6.1.0'
 
   spec.add_development_dependency 'pg'
