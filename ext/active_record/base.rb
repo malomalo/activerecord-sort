@@ -48,7 +48,7 @@ module ActiveRecord
           elsif reflect_on_association(column_or_relation.to_sym)
             resource = resource.sort_for_relation(column_or_relation.to_sym, options)
           else
-            raise InvalidSort.new("Unkown column #{column_or_relation}")
+            raise InvalidSort.new("Unknown column #{column_or_relation}")
           end
         end
       end
@@ -78,7 +78,7 @@ module ActiveRecord
       elsif direction == :asc
         self.order(Arel::Nodes::Ascending.new(column, nulls))
       else
-        raise InvalidSort.new("Unkown ordering #{direction}")
+        raise InvalidSort.new("Unknown ordering #{direction}")
       end
     end
 
@@ -91,70 +91,51 @@ module ActiveRecord
     def sort_for_relation(relation, options)
       resource = self
       relation = reflect_on_association(relation)
+      options = [options] if !options.is_a?(Array)
 
-      if relation.macro == :has_many || relation.macro == :has_and_belongs_to_many
-        options = [options] if !options.is_a?(Array)
-
-        options.each do |order|
-          Array(order).each do |column_name, options|
-            # LEFT JOIN the collection, group by this table's primary key —
-            # so rows don't fan / duplicate and records with an empty
-            # collection still appear — and order by an aggregate of the
-            # requested column:
-            #
-            #   SELECT properties.*
-            #   FROM properties
-            #   LEFT JOIN properties_tags ON properties_tags.property_id = properties.id
-            #   LEFT JOIN tags ON tags.id = properties_tags.tag_id
-            #   GROUP BY properties.id
-            #   ORDER BY MIN(tags.name) ASC
-            #
-            # Ascending keys each record by its smallest member (MIN),
-            # descending by its largest (MAX) — the member you'd expect to
-            # see first in that direction. Toggling asc/desc therefore
-            # re-keys multi-value records rather than strictly reversing
-            # the list.
-            if !relation.klass.column_names.include?(column_name.to_s)
-              raise InvalidSort.new("Unkown column #{column_name}")
-            end
-            column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-            direction, nulls = sort_direction_and_nulls(options)
-
-            order = if direction == :desc
-              Arel::Nodes::Descending.new(column.maximum, nulls)
-            elsif direction == :asc
-              Arel::Nodes::Ascending.new(column.minimum, nulls)
-            else
-              raise InvalidSort.new("Unkown ordering #{direction}")
-            end
-
-            resource = resource.left_outer_joins(relation.name)
-            resource = resource.order(order)
+      # LEFT JOIN the association, group by this table's primary key — so
+      # rows don't fan / duplicate and records with an empty collection
+      # still appear — and order by an aggregate of the requested column:
+      #
+      #   SELECT properties.*
+      #   FROM properties
+      #   LEFT JOIN properties_tags ON properties_tags.property_id = properties.id
+      #   LEFT JOIN tags ON tags.id = properties_tags.tag_id
+      #   GROUP BY properties.id
+      #   ORDER BY MIN(tags.name) ASC
+      #
+      # Ascending keys each record by its smallest member (MIN), descending
+      # by its largest (MAX) — the member you'd expect to see first in that
+      # direction. Toggling asc/desc therefore re-keys multi-value records
+      # rather than strictly reversing the list.
+      options.each do |order|
+        Array(order).each do |column_name, column_options|
+          if !relation.klass.column_names.include?(column_name.to_s)
+            raise InvalidSort.new("Unknown column #{column_name}")
           end
-        end
-      elsif relation.macro == :belongs_to || relation.macro == :has_one
-        options = [options] if !options.is_a?(Array)
 
-        options.each do |order|
-          order = Array(order)
-          order.each do |column, options|
-            if !relation.klass.column_names.include?(column.to_s)
-              raise InvalidSort.new("Unkown column #{column}")
-            end
-            column = relation.klass.arel_table[column]
-            direction, nulls = sort_direction_and_nulls(options)
-
-            if direction == :desc
-              order = Arel::Nodes::Descending.new(column.maximum, nulls)
-            elsif direction == :asc
-              order = Arel::Nodes::Ascending.new(column.minimum, nulls)
-            else
-              raise InvalidSort.new("Unkown ordering #{direction}")
-            end
-
-            resource = resource.left_outer_joins(relation.name)
-            resource = resource.order(order)
+          # A collection (has_many / has_and_belongs_to_many) wraps the
+          # attribute in an Arel::Attributes::Relation so the aggregate
+          # references the joined table correctly; a singular association
+          # (belongs_to / has_one) uses the plain attribute.
+          column = if relation.collection?
+            Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
+          else
+            relation.klass.arel_table[column_name]
           end
+
+          direction, nulls = sort_direction_and_nulls(column_options)
+
+          order = if direction == :desc
+            Arel::Nodes::Descending.new(column.maximum, nulls)
+          elsif direction == :asc
+            Arel::Nodes::Ascending.new(column.minimum, nulls)
+          else
+            raise InvalidSort.new("Unknown ordering #{direction}")
+          end
+
+          resource = resource.left_outer_joins(relation.name)
+          resource = resource.order(order)
         end
       end
 
