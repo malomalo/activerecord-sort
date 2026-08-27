@@ -61,6 +61,12 @@ class BelongsToSortTest < ActiveSupport::TestCase
     end
   end
 
+  test '::sort(:belongs_to_relationship => :unknown_column) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Address.sort(property: :not_a_column)
+    end
+  end
+
   # Chaining .distinct after a relation sort is not supported: the sort
   # column lives only in the ORDER BY, and for SELECT DISTINCT Postgres
   # requires ORDER BY expressions to appear in the select list. Better to

@@ -81,6 +81,12 @@ class HasAndBelongsToManySortTest < ActiveSupport::TestCase
     end
   end
 
+  test '::sort(:habtm_relationship => :unknown_column) raises' do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Property.sort(tags: :not_a_column)
+    end
+  end
+
   # pluck/ids replace the select list — the ORDER BY references the
   # aggregate expression directly (nothing in the select list), so the
   # sort survives that.

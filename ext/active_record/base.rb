@@ -105,6 +105,9 @@ module ActiveRecord
             # see first in that direction. Toggling asc/desc therefore
             # re-keys multi-value records rather than strictly reversing
             # the list.
+            if !relation.klass.column_names.include?(column_name.to_s)
+              raise ActiveRecord::StatementInvalid.new("Unkown column #{column_name}")
+            end
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
             direction, nulls = sort_direction_and_nulls(options)
 
@@ -126,6 +129,9 @@ module ActiveRecord
         options.each do |order|
           order = Array(order)
           order.each do |column, options|
+            if !relation.klass.column_names.include?(column.to_s)
+              raise ActiveRecord::StatementInvalid.new("Unkown column #{column}")
+            end
             column = relation.klass.arel_table[column]
             direction, nulls = sort_direction_and_nulls(options)
 
