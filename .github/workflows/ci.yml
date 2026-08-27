@@ -45,13 +45,6 @@ jobs:
 
       - uses: actions/checkout@v7
 
-      - name: Add logger for Ruby 3.5 (no longer bundled gem, drop when rails adds)
-        run: |
-          echo ""  >> Gemfile
-          echo 'gem "logger"' >> Gemfile
-          echo ""  >> Gemfile
-          echo 'gem "benchmark"' >> Gemfile
-
       - run: |
           echo ""  >> Gemfile
           echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
