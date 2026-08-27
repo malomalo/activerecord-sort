@@ -1,4 +1,4 @@
-## [7.0.0]
+## [7.0.0] - 2026-08-27
 
 The gem's version is now independent of the Rails version it targets.
 
