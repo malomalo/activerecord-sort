@@ -139,7 +139,15 @@ module ActiveRecord
         end
       end
 
-      resource = resource.group(klass.arel_table[klass.primary_key])
+      # Group by the primary key so the aggregate collapses the joined,
+      # fanned-out rows to one per record. Every relation sort adds this,
+      # so only add it once: ActiveRecord < 8.1's group! appends rather
+      # than unioning, which would leave a duplicate [pk, pk] that trips
+      # the count override's group_values check below.
+      # TODO: once Rails <= 8.0 is no longer supported, group! unions on
+      # its own — drop the include? guard and just group(primary_key).
+      primary_key = klass.arel_table[klass.primary_key]
+      resource = resource.group(primary_key) unless resource.group_values.include?(primary_key)
       # Tag the relation for the count override below. Chained relations
       # are built with clone, which copies instance variables, so the tag
       # survives further chaining.

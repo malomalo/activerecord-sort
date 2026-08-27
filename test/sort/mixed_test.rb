@@ -99,8 +99,8 @@ class MixedSortTest < ActiveSupport::TestCase
   end
 
   # Chained sorts accumulate ORDER BY entries but share a single GROUP BY:
-  # group! merges with a set union and the primary-key attribute compares
-  # by value, so repeated grouping collapses to one entry.
+  # each relation sort adds the primary-key grouping only if it isn't
+  # already present, so repeated grouping collapses to one entry.
   test '::sort(...).sort(...) chained sorts share one GROUP BY' do
     query = Property.sort(tags: {name: :asc}).sort(deed: {name: :desc})
 
