@@ -54,7 +54,10 @@ It can also sort on relations. A relation sort groups by the sorted table's
 primary key — so each record appears once and records with no associated
 rows are still included — and orders by an aggregate of the requested
 column: `MIN` ascending or `MAX` descending, keying each record by the
-member you'd expect to see first in that direction:
+member you'd expect to see first in that direction. A record with no
+associated rows has a `NULL` sort key; where `NULL`s land is
+database-dependent, so pass `nulls_first`/`nulls_last` to place those
+records explicitly:
 
 ```ruby
 Property.sort(addresses: :id).to_sql
@@ -93,8 +96,12 @@ Unrecognized columns raise, so unfiltered params can't inject SQL:
 
 ```ruby
 Property.sort(:name_or_something_unexpected)
-# => raises ActiveRecord::StatementInvalid
+# => raises ActiveRecord::Sort::InvalidSort
 ```
+
+`ActiveRecord::Sort::InvalidSort` subclasses `ActiveRecord::StatementInvalid`,
+so existing `rescue ActiveRecord::StatementInvalid` handlers keep catching bad
+sort parameters, while callers that want to can rescue the narrower class.
 
 Called with no arguments, `#sort` behaves like Ruby's `Enumerable#sort` —
 it loads the records and sorts them by `<=>` — rather than building a query:
