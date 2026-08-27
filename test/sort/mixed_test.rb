@@ -121,4 +121,12 @@ class MixedSortTest < ActiveSupport::TestCase
     assert_equal ['acorn', 'zebra'], names
   end
 
+  # Two relation sorts each append a GROUP BY on the primary key; they
+  # collapse to one, so the aggregate override still sees group_values ==
+  # [pk] and count returns the record count (2) rather than a per-group
+  # Hash or a total inflated by the tag/address join fan-out.
+  test '::sort mixing multiple relations counts each record once' do
+    assert_equal 2, Property.sort(tags: {name: :asc}, addresses: {name: :asc}).count
+  end
+
 end
