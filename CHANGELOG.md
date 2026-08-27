@@ -33,7 +33,7 @@
   `Address.sort(property: :name)`) now defaults to ascending, matching
   every other sort form (previously descending).
 - An unknown sort direction on a relation sort (e.g. `:dsc`) now raises
-  `ActiveRecord::StatementInvalid` (previously sorted ascending
+  `ActiveRecord::Sort::InvalidSort` (previously sorted ascending
   silently), matching column sorts.
 
 ### Added
