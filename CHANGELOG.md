@@ -1,4 +1,4 @@
-## [9.0.0]
+## [7.0.0]
 
 The gem's version is now independent of the Rails version it targets.
 
@@ -25,4 +25,4 @@ The gem's version is now independent of the Rails version it targets.
   `ActiveRecord::QueryMethods.public_instance_methods(false)` — which keeps
   Rails' internal delegation invariants intact.
 
-[9.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v9.0.0
+[7.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v7.0.0
