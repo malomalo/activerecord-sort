@@ -17,23 +17,35 @@ class SortTest < ActiveSupport::TestCase
   end
   
   test '::sort(:invalid)' do
-    assert_raises(ActiveRecord::StatementInvalid) do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
       Property.sort(:invalid_column)#.to_sql
     end
   end
-  
+
+  # InvalidSort subclasses StatementInvalid, so callers relying on the
+  # documented `rescue ActiveRecord::StatementInvalid` contract keep
+  # catching bad sort parameters.
+  test 'InvalidSort is rescuable as ActiveRecord::StatementInvalid' do
+    assert ActiveRecord::Sort::InvalidSort < ActiveRecord::StatementInvalid
+
+    error = assert_raises(ActiveRecord::StatementInvalid) do
+      Property.sort(:invalid_column)
+    end
+    assert_kind_of ActiveRecord::Sort::InvalidSort, error
+  end
+
   test '::sort(:random)' do
     assert_equal('SELECT "properties".* FROM "properties" ORDER BY RANDOM()', Property.sort(:random).to_sql.gsub(/\s+/, ' '))
   end
-  
+
   test '::sort(:id => :invalid)' do
-    assert_raises(ActiveRecord::StatementInvalid) do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
       Property.sort(:id => :invalid)
     end
   end
-  
+
   test '::sort(:id => {:asc => :nulls_invalid})' do
-    assert_raises(ActiveRecord::StatementInvalid) do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
       Property.sort(:id => :invalid)
     end
   end

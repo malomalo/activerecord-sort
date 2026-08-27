@@ -39,6 +39,13 @@
 ### Added
 
 - Sorting by `has_and_belongs_to_many` relations.
+- Unrecognized sort columns, associations, and directions raise
+  `ActiveRecord::Sort::InvalidSort`, a subclass of
+  `ActiveRecord::StatementInvalid` — so existing
+  `rescue ActiveRecord::StatementInvalid` handlers still catch bad sort
+  parameters, while callers can rescue the narrower class. Relation sort
+  columns are now validated up front (against the associated model's
+  columns) instead of only failing once the query reaches the database.
 - Sorts of different types compose: they can be combined in one call
   (`Property.sort(:name, tags: :name, addresses: :id)`) or chained
   (`.sort(...).sort(...)`), sharing a single `GROUP BY`.

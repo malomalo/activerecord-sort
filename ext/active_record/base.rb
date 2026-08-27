@@ -8,6 +8,15 @@ module ActiveRecord
   # delegation tests assert against — while relations still respond to them.
   module Sort
 
+    # Raised when a sort references an unrecognized column or association,
+    # or an unknown direction. Subclasses StatementInvalid so existing
+    # `rescue ActiveRecord::StatementInvalid` handlers — the safety
+    # contract that makes it OK to pass request params straight through —
+    # keep working, while callers can rescue this narrower class to tell a
+    # bad sort parameter apart from a genuine database error.
+    class InvalidSort < ActiveRecord::StatementInvalid
+    end
+
     # ordering:
     # :id
     # :name, :id
@@ -39,7 +48,7 @@ module ActiveRecord
           elsif reflect_on_association(column_or_relation.to_sym)
             resource = resource.sort_for_relation(column_or_relation.to_sym, options)
           else
-            raise ActiveRecord::StatementInvalid.new("Unkown column #{column_or_relation}")
+            raise InvalidSort.new("Unkown column #{column_or_relation}")
           end
         end
       end
@@ -69,7 +78,7 @@ module ActiveRecord
       elsif direction == :asc
         self.order(Arel::Nodes::Ascending.new(column, nulls))
       else
-        raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
+        raise InvalidSort.new("Unkown ordering #{direction}")
       end
     end
 
@@ -106,7 +115,7 @@ module ActiveRecord
             # re-keys multi-value records rather than strictly reversing
             # the list.
             if !relation.klass.column_names.include?(column_name.to_s)
-              raise ActiveRecord::StatementInvalid.new("Unkown column #{column_name}")
+              raise InvalidSort.new("Unkown column #{column_name}")
             end
             column = Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
             direction, nulls = sort_direction_and_nulls(options)
@@ -116,7 +125,7 @@ module ActiveRecord
             elsif direction == :asc
               Arel::Nodes::Ascending.new(column.minimum, nulls)
             else
-              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
+              raise InvalidSort.new("Unkown ordering #{direction}")
             end
 
             resource = resource.left_outer_joins(relation.name)
@@ -130,7 +139,7 @@ module ActiveRecord
           order = Array(order)
           order.each do |column, options|
             if !relation.klass.column_names.include?(column.to_s)
-              raise ActiveRecord::StatementInvalid.new("Unkown column #{column}")
+              raise InvalidSort.new("Unkown column #{column}")
             end
             column = relation.klass.arel_table[column]
             direction, nulls = sort_direction_and_nulls(options)
@@ -140,7 +149,7 @@ module ActiveRecord
             elsif direction == :asc
               order = Arel::Nodes::Ascending.new(column.minimum, nulls)
             else
-              raise ActiveRecord::StatementInvalid.new("Unkown ordering #{direction}")
+              raise InvalidSort.new("Unkown ordering #{direction}")
             end
 
             resource = resource.left_outer_joins(relation.name)
