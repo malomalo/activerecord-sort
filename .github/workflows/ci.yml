@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: ActiveRecord::Sort Test
@@ -14,25 +18,23 @@ jobs:
       fail-fast: false
       matrix:
         rails-version:
-          - 7.1
-          - 7.2
-          - 8.0
-          - 8.1
+          - "8.0"
+          - "8.1"
         ruby-version:
-          - 3.2
-          - 3.3
-          - 3.4
-          - 4.0
+          - "3.3"
+          - "3.4"
+          - "4.0"
         postgres-version:
-          - 17
+          - "18"
 
     steps:
       - name: Install Postgresql
         run: |
           sudo apt-get -y --purge remove $(sudo apt list --installed | grep postgresql | awk '{print $1}')
           sudo apt-get install curl ca-certificates gnupg
-          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo install -d /etc/apt/keyrings
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
           sudo apt-get -y install postgresql-${{ matrix.postgres-version }}-postgis-3
           sudo systemctl start postgresql@${{ matrix.postgres-version }}-main.service
@@ -52,7 +54,7 @@ jobs:
 
       - run: |
           echo ""  >> Gemfile
-          echo 'gem "rails", "${{ matrix.rails-version }}"' >> Gemfile
+          echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -68,25 +70,21 @@ jobs:
       fail-fast: false
       matrix:
         ruby-version:
-          - 3.4
+          - "3.4"
         rails-version:
-          - 7.2.3
-          - 8.0.5
-          - 8.1.3
+          - "8.0"
+          - "8.1"
         postgres-version:
-          - 17
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
-            postgres-version: '17'
+          - "18"
 
     steps:
       - name: Install Postgresql
         run: |
           sudo apt-get -y --purge remove $(sudo apt list --installed | grep postgresql | awk '{print $1}')
           sudo apt-get install curl ca-certificates gnupg
-          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo install -d /etc/apt/keyrings
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
           sudo apt-get -y install postgresql-${{ matrix.postgres-version }}-postgis-3
           sudo systemctl start postgresql@${{ matrix.postgres-version }}-main.service
@@ -104,21 +102,25 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
-          sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          sed -i "/require \"active_record\"\$/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "active_record/sort" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
-
-      - name: This can eventually be removed
-        run: |
-          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
-          sed -i 's/module ActiveRecord$/module Rails\nend\nmodule ActiveRecord/' ~/rails/activerecord/test/cases/adapters/postgresql/postgresql_adapter_test.rb || true
-          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
 
       - name: Bundle
         run: |
@@ -138,47 +140,40 @@ jobs:
       fail-fast: false
       matrix:
         ruby-version:
-          - 3.4
+          - "3.4"
         rails-version:
-          - 7.2.3
-          - 8.0.5
-          - 8.1.3
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
+          - "8.0"
+          - "8.1"
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.0
-          
-      - uses: ruby/setup-ruby@v1
-        with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
-    
+
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
-          sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          sed -i "/require \"active_record\"\$/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "active_record/sort" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
-
-      - name: This can eventually be removed
-        run: |
-          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
-          cat ~/rails/Gemfile
-          sed -i 's/module ActiveRecord$/module Rails\nend\nmodule ActiveRecord/' ~/rails/activerecord/test/cases/adapters/sqlite3/dbconsole_test.rb
-          cat  ~/rails/activerecord/test/cases/adapters/sqlite3/dbconsole_test.rb
-          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
-          cat ~/rails/activerecord/Rakefile
 
       - name: Bundle
         run: |
@@ -201,21 +196,34 @@ jobs:
       fail-fast: false
       matrix:
         ruby-version:
-          - 3.4
+          - "3.4"
         rails-version:
-          - 7.2.3
-          - 8.0.5
-          - 8.1.3
-        include:
-          - rails-version: '7.1.6'
-            ruby-version: '3.3'
+          - "8.0"
+          - "8.1"
+        mysql-version:
+          - "8.4"
+    env:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql-version }}
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
-      - name: Install MySQL
+      - name: Setup MySQL user
         run: |
-          sudo /etc/init.d/mysql start
-          mysql -uroot -proot -e "CREATE USER 'rails'@'%';"
-          mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON *.* TO 'rails'@'%' WITH GRANT OPTION;"
+          mysql -h127.0.0.1 -P3306 -uroot -e "CREATE USER 'rails'@'%';"
+          mysql -h127.0.0.1 -P3306 -uroot -e "GRANT ALL PRIVILEGES ON *.* TO 'rails'@'%' WITH GRANT OPTION;"
 
       - uses: actions/checkout@v7
 
@@ -226,23 +234,25 @@ jobs:
 
       - name: Download Rails
         run: |
-          git clone --branch v${{ matrix.rails-version }} https://github.com/rails/rails.git ~/rails
+          series="${{ matrix.rails-version }}"
+          esc="${series//./\\.}"
+          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+            | sed 's,.*refs/tags/,,' \
+            | grep -E "^v${esc}(\.[0-9]+)+$" \
+            | sort -V | tail -1)
+          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
           sed -i "s/Gem.ruby, '-w'/Gem.ruby, '-w0'/" ~/rails/activerecord/Rakefile
           sed -i "s/t.warning = true/t.warning = false/g" ~/rails/activerecord/Rakefile
-          sed -i "/require 'support\/connection'/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          sed -i "/require \"active_record\"\$/a \$LOAD_PATH.unshift\(File.expand_path\(ENV['GITHUB_WORKSPACE']\)\)\nrequire 'active_record/sort'" ~/rails/activerecord/test/cases/helper.rb
+          grep -q "active_record/sort" ~/rails/activerecord/test/cases/helper.rb || { echo "ERROR: failed to inject 'require active_record/sort' into helper.rb (anchor line changed upstream?)"; exit 1; }
           rm ~/rails/Gemfile.lock
           sed -i "/# Active Record./a gem 'activerecord-sort', require: 'active_record/sort', path: File.expand_path\(ENV['GITHUB_WORKSPACE']\)" ~/rails/Gemfile
+          grep -q "activerecord-sort" ~/rails/Gemfile || { echo "ERROR: failed to inject activerecord-sort into Gemfile (anchor line changed upstream?)"; exit 1; }
           cat ~/rails/Gemfile
-
-      - name: This can eventually be removed
-        run: |
-          sed -i 's/gem "minitest"$/gem "minitest"\ngem "minitest-mock", require: "minitest\/mock"/' ~/rails/Gemfile
-          sed -i 's/class WarningsTest < ActiveRecord::AbstractMysqlTestCase$/module Rails\nend\nclass WarningsTest < ActiveRecord::AbstractMysqlTestCase/' ~/rails/activerecord/test/cases/adapters/abstract_mysql_adapter/warnings_test.rb || true
-          sed -i 's/class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase$/module Rails\nend\nclass Mysql2AdapterTest < ActiveRecord::Mysql2TestCase/' ~/rails/activerecord/test/cases/adapters/mysql2/mysql2_adapter_test.rb || true
-          sed -i 's/t.options = "--profile" if ENV\["CI"\]//g' ~/rails/activerecord/Rakefile
-          cat ~/rails/activerecord/Rakefile
 
       - name: Bundle
         run: |

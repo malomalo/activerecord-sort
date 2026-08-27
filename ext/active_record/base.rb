@@ -2,8 +2,11 @@ require 'active_record'
 require 'active_record/relation'
 
 module ActiveRecord
-  module QueryMethods
-  # class << self
+  # Prepended onto ActiveRecord::QueryMethods (see lib/active_record/sort.rb).
+  # Living in a separate module keeps these methods out of
+  # QueryMethods.public_instance_methods(false) — which Rails' own
+  # delegation tests assert against — while relations still respond to them.
+  module Sort
 
     # ordering:
     # :id
@@ -13,7 +16,14 @@ module ActiveRecord
     # :listings => :id
     # :listings => {:id => {:asc => :nulls_first}}
     # :random
-    def sort(*ordering)
+    def sort(*ordering, &block)
+      # With no arguments, fall back to Ruby's Enumerable#sort so code (and
+      # Rails' own test suite) that calls `relation.sort` expecting Ruby
+      # semantics keeps working. The ordering DSL only applies when given
+      # arguments; `sort(nil)`/`sort([])` still return the relation for
+      # chaining.
+      return super(&block) if ordering.empty?
+
       resource = all
       ordering.compact!
       ordering.flatten!
@@ -23,7 +33,7 @@ module ActiveRecord
         order = Array(order)
         order.each do |column_or_relation, options|
           if column_or_relation.to_sym == :random
-            resource = resource.random_sort
+            resource = resource.order(Arel::Nodes::RandomOrdering.new)
           elsif self.column_names.include?(column_or_relation.to_s)
             resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
           elsif reflect_on_association(column_or_relation.to_sym)
@@ -35,10 +45,6 @@ module ActiveRecord
       end
 
       resource
-    end
-    
-    def random_sort
-      self.order(Arel::Nodes::RandomOrdering.new)
     end
 
     # Normalizes per-column sort options into [direction, nulls]. A blank

@@ -1,11 +1,6 @@
 # Changelog
 
-## 10.0.0.rc1 (July 15, 2026)
-
-Starting with this release the gem is versioned independently of Rails,
-following [semantic versioning](https://semver.org). Earlier releases
-(6.x) tracked the minimum supported Rails version; the jump to 10 makes
-the break explicit so the version can't be misread as a Rails version.
+## [8.0.0] - 2026-08-27
 
 ### Breaking changes
 
@@ -40,7 +35,6 @@ the break explicit so the version can't be misread as a Rails version.
 - An unknown sort direction on a relation sort (e.g. `:dsc`) now raises
   `ActiveRecord::StatementInvalid` (previously sorted ascending
   silently), matching column sorts.
-- ActiveRecord 7.1 or newer is required (previously 6.1).
 
 ### Added
 
@@ -66,3 +60,33 @@ the break explicit so the version can't be misread as a Rails version.
   there).
 - Combining a `has_and_belongs_to_many` sort with another relation sort
   raised `PG::GroupingError`.
+
+## [7.0.0] - 2026-08-27
+
+The gem's version is now independent of the Rails version it targets.
+
+### Breaking Changes
+
+- Removed the public `random_sort` method. Use `sort(:random)` instead.
+
+### Changed
+
+- Require `activerecord >= 8.0.0, < 9.0`; support for Rails 7.1 and 7.2 has
+  been dropped.
+- Require `arel-extensions >= 9.0.0`.
+- `#sort` called with no arguments now falls back to Ruby's `Enumerable#sort`
+  (loads the records and sorts them by `<=>`) instead of returning the
+  relation. Pass arguments to use the ordering DSL; `sort(nil)` and `sort([])`
+  still return the relation for chaining.
+
+### Internal
+
+- The `sort`, `sort_for_column`, and `sort_for_relation` methods are now
+  defined in an `ActiveRecord::Sort` module prepended onto
+  `ActiveRecord::QueryMethods`, rather than reopening `QueryMethods` directly.
+  Relations still respond to them, but they no longer appear in
+  `ActiveRecord::QueryMethods.public_instance_methods(false)` — which keeps
+  Rails' internal delegation invariants intact.
+
+[8.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v8.0.0
+[7.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v7.0.0
