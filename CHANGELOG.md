@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- An unrecognized value in the nulls position now raises
+  `ActiveRecord::Sort::InvalidSort` instead of being silently dropped.
+  `sort(:name => {:asc => :nulls_frist})` previously ordered by a plain
+  `ASC`, quietly returning results in the wrong null order; it now raises,
+  like any other unknown sort value. A blank nulls value still means "no
+  `NULLS` clause" rather than an invalid one — `""` (what query params
+  send) and `nil` (what JSON sends) are both absent, not wrong.
+
+### Fixed
+
+- Directions and nulls values are now matched case-insensitively wherever
+  they appear. `sort(:name => 'DESC')` already downcased, but the hash forms
+  did not, so `sort(:name => {'DESC' => 'NULLS_LAST'})` raised on the same
+  input the bare form accepted.
+- `sort(:name => {})` now sorts ascending instead of raising. An empty hash
+  states no direction, which is what `""` (from a query string) and `nil`
+  (from JSON) already meant; the blank check simply sat after the hash
+  check and so never saw it.
+- Sort parameters holding `nil` or a non-string key no longer raise
+  `NoMethodError`. `{"name" => {"asc" => nil}}`, `{"name" => {nil =>
+  "asc"}}` and a non-string column such as `{123 =>
+  "asc"}` — all reachable from a JSON request body, where a query string
+  would send `""` — now raise `ActiveRecord::Sort::InvalidSort`, or sort
+  normally where the value is merely absent, honoring the documented
+  contract that unfiltered params are rescuable as
+  `ActiveRecord::StatementInvalid`.
+
 ## [8.0.0] - 2026-08-27
 
 ### Breaking changes
