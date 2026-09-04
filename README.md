@@ -2,8 +2,12 @@
 
 `ActiveRecord::Sort` provides an easy, safe way to accept user input and order a
 query by it. Only recognized columns and associations produce SQL — anything
-else raises `ActiveRecord::StatementInvalid`, so it's safe to pass request
-parameters straight through.
+else raises `ActiveRecord::StatementInvalid`, so unfiltered request parameters
+can't inject SQL.
+
+Recognized is not the same as permitted, though. Every column on the model and
+on its associations is sortable, including ones you never expose — see
+[Restricting what can be sorted](#restricting-what-can-be-sorted).
 
 Requirements
 ------------
@@ -110,3 +114,35 @@ it loads the records and sorts them by `<=>` — rather than building a query:
 Property.all.sort            # => Array of Property, sorted by <=>
 Property.sort(nil)           # => relation (unchanged), for chaining
 ```
+
+Restricting what can be sorted
+------------------------------
+
+`#sort` checks that a name is a real column or association — not that the
+requester is allowed to know about it. Every column is sortable, including the
+ones you don't select:
+
+```ruby
+User.sort(:password_digest)               # valid, and it sorts
+Post.sort(author: :reset_password_token)  # so is this
+```
+
+A sort reveals something about a column even though its values are never
+returned, because the resulting order is a comparison. Someone with a row they
+control can set their own value, see which side of it a target row lands on,
+and narrow the value down over a series of ordinary-looking requests. Equal
+values also sort together, which is enough to tell that two accounts share a
+password hash.
+
+So passing parameters straight through is safe as far as SQL injection goes,
+but *which* columns may be sorted is an authorization question, and only your
+application can answer it. Filter the parameters before they reach `#sort`:
+
+```ruby
+SORTABLE = %w[name created_at].freeze
+
+Property.sort(sort_params.slice(*SORTABLE))
+```
+
+[StandardAPI](https://github.com/malomalo/standardapi) does this with an ACL,
+resolving per request which attributes a user may read and sort by.
