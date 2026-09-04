@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## [8.0.1] - 2026-09-04
 
 ### Changed
 
+- Enabled `# frozen_string_literal: true`, so the gem no longer allocates a
+  new String for each literal it evaluates.
 - An unrecognized value in the nulls position now raises
   `ActiveRecord::Sort::InvalidSort` instead of being silently dropped.
   `sort(:name => {:asc => :nulls_frist})` previously ordered by a plain
