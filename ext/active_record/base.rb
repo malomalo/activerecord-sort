@@ -60,41 +60,43 @@ module ActiveRecord
 
     # Normalizes per-column sort options into [direction, nulls]. A blank
     # direction — a bare column, or "" as query params often produce —
-    # means :asc; a blank or nil value means no NULLS clause.
-    # TODO: probably don't need to cast to sym
+    # means 'asc'; a blank or nil value means no NULLS clause.
     def sort_direction_and_nulls(options)
       if options.blank?
-        [:asc, nil]
+        ['asc', nil]
       elsif options.is_a?(Hash) || options.class.name == "ActionController::Parameters"
-        direction = options.keys.first.to_s.downcase.to_sym
+        direction = options.keys.first.to_s.downcase
 
-        if direction == :asc || direction == :desc
+        if direction == 'asc' || direction == 'desc'
           [direction, sort_nulls(options.values.first)]
         else
           [direction, nil]
         end
       else
-        [options.to_s.downcase.to_sym, nil]
+        [options.to_s.downcase, nil]
       end
     end
 
+    # Cast on the way out: Arel's visitor matches the nulls value with
+    # `case o.nulls when :nulls_first`, so this is the one value that has
+    # to reach the node as a symbol.
     def sort_nulls(value)
       return nil if value.blank?
 
-      nulls = value.to_s.downcase.to_sym
-      if nulls != :nulls_first && nulls != :nulls_last
+      nulls = value.to_s.downcase
+      if nulls != 'nulls_first' && nulls != 'nulls_last'
         raise InvalidSort.new("Unknown nulls ordering #{value}")
       end
 
-      nulls
+      nulls.to_sym
     end
 
     def sort_for_column(column, options)
       direction, nulls = sort_direction_and_nulls(options)
 
-      if direction == :desc
+      if direction == 'desc'
         self.order(Arel::Nodes::Descending.new(column, nulls))
-      elsif direction == :asc
+      elsif direction == 'asc'
         self.order(Arel::Nodes::Ascending.new(column, nulls))
       else
         raise InvalidSort.new("Unknown ordering #{direction}")
@@ -145,9 +147,9 @@ module ActiveRecord
 
           direction, nulls = sort_direction_and_nulls(column_options)
 
-          order = if direction == :desc
+          order = if direction == 'desc'
             Arel::Nodes::Descending.new(column.maximum, nulls)
-          elsif direction == :asc
+          elsif direction == 'asc'
             Arel::Nodes::Ascending.new(column.minimum, nulls)
           else
             raise InvalidSort.new("Unknown ordering #{direction}")
