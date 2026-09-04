@@ -97,4 +97,30 @@ class HasManySortTest < ActiveSupport::TestCase
     end
   end
 
+  test '::sort(:has_many_relationship => nil_column) raises' do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
+      Property.sort(addresses: {nil => :asc})
+    end
+  end
+
+  test '::sort(:has_many_relationship => non_string_column) raises' do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
+      Property.sort(addresses: 123)
+    end
+  end
+
+  test '::sort(:has_many_relationship => {:column => :invalid_nulls}) raises' do
+    assert_raises(ActiveRecord::Sort::InvalidSort) do
+      Property.sort(addresses: {id: {asc: :nulls_invalid}})
+    end
+  end
+
+  test '::sort(:has_many_relationship => {:column => {:asc => nil}})' do
+    assert_equal(<<-SQL.strip.gsub(/\s+/, ' '), Property.sort(addresses: {id: {asc: nil}}).to_sql.gsub(/\s+/, ' '))
+      SELECT "properties".* FROM "properties"
+      LEFT OUTER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
+      GROUP BY "properties"."id" ORDER BY MIN("addresses"."id") ASC
+    SQL
+  end
+
 end

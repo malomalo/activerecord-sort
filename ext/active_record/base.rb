@@ -41,14 +41,16 @@ module ActiveRecord
       ordering.each do |order|
         order = Array(order)
         order.each do |column_or_relation, options|
-          if column_or_relation.to_sym == :random
+          key = column_or_relation.to_s
+
+          if key == 'random'
             resource = resource.order(Arel::Nodes::RandomOrdering.new)
-          elsif self.column_names.include?(column_or_relation.to_s)
-            resource = resource.sort_for_column(self.arel_table[column_or_relation.to_s], options)
-          elsif reflect_on_association(column_or_relation.to_sym)
-            resource = resource.sort_for_relation(column_or_relation.to_sym, options)
+          elsif self.column_names.include?(key)
+            resource = resource.sort_for_column(self.arel_table[key], options)
+          elsif reflect_on_association(key)
+            resource = resource.sort_for_relation(key, options)
           else
-            raise InvalidSort.new("Unknown column #{column_or_relation}")
+            raise InvalidSort.new("Unknown column #{key}")
           end
         end
       end
@@ -58,16 +60,33 @@ module ActiveRecord
 
     # Normalizes per-column sort options into [direction, nulls]. A blank
     # direction — a bare column, or "" as query params often produce —
-    # means :asc.
+    # means :asc; a blank or nil value means no NULLS clause.
     # TODO: probably don't need to cast to sym
     def sort_direction_and_nulls(options)
-      if options.is_a?(Hash) || options.class.name == "ActionController::Parameters"
-        [options.keys.first.to_sym, options.values.first.to_sym]
-      elsif options.blank?
+      if options.blank?
         [:asc, nil]
+      elsif options.is_a?(Hash) || options.class.name == "ActionController::Parameters"
+        direction = options.keys.first.to_s.downcase.to_sym
+
+        if direction == :asc || direction == :desc
+          [direction, sort_nulls(options.values.first)]
+        else
+          [direction, nil]
+        end
       else
         [options.to_s.downcase.to_sym, nil]
       end
+    end
+
+    def sort_nulls(value)
+      return nil if value.blank?
+
+      nulls = value.to_s.downcase.to_sym
+      if nulls != :nulls_first && nulls != :nulls_last
+        raise InvalidSort.new("Unknown nulls ordering #{value}")
+      end
+
+      nulls
     end
 
     def sort_for_column(column, options)
