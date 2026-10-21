@@ -135,7 +135,8 @@ jobs:
           pushd ~/rails/activerecord
           bundle exec rake db:postgresql:rebuild postgresql:test
           # Rails main removed the isolated test tasks; run them where they exist
-          if bundle exec rake -P | grep -qx "rake postgresql:isolated_test"; then
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake postgresql:isolated_test" <<<"$tasks"; then
             bundle exec rake db:postgresql:rebuild postgresql:isolated_test
           fi
           
@@ -197,7 +198,8 @@ jobs:
           bundle exec rake sqlite3:test
           rm test/db/*.sqlite3 test/fixtures/*.sqlite3
           # Rails main removed the isolated test tasks; run them where they exist
-          if bundle exec rake -P | grep -qx "rake sqlite3:isolated_test"; then
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake sqlite3:isolated_test" <<<"$tasks"; then
             bundle exec rake sqlite3:isolated_test
             rm test/db/*.sqlite3 test/fixtures/*.sqlite3
           fi
@@ -283,6 +285,7 @@ jobs:
           pushd ~/rails/activerecord
           bundle exec rake db:mysql:rebuild mysql2:test
           # Rails main removed the isolated test tasks; run them where they exist
-          if bundle exec rake -P | grep -qx "rake mysql2:isolated_test"; then
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake mysql2:isolated_test" <<<"$tasks"; then
             bundle exec rake db:mysql:rebuild mysql2:isolated_test
           fi
