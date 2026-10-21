@@ -14,12 +14,16 @@ jobs:
   test:
     name: ActiveRecord::Sort Test
     runs-on: ubuntu-24.04
+    # Rails main is tested to catch changes early; it can break on its own,
+    # so a failure there doesn't fail the run
+    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         ruby-version:
           - "3.3"
           - "3.4"
@@ -47,7 +51,11 @@ jobs:
 
       - run: |
           echo ""  >> Gemfile
-          echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
+          if [ "${{ matrix.rails-version }}" = "main" ]; then
+            echo 'gem "rails", github: "rails/rails", branch: "main"' >> Gemfile
+          else
+            echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
+          fi
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -59,6 +67,9 @@ jobs:
   ar-postgresql:
     name: ActiveRecord PostgresQL Test
     runs-on: ubuntu-24.04
+    # Rails main is tested to catch changes early; it can break on its own,
+    # so a failure there doesn't fail the run
+    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,6 +78,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         postgres-version:
           - "18"
 
@@ -96,13 +108,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
@@ -129,6 +145,9 @@ jobs:
   ar-sqlite:
     name: ActiveRecord SQLite Test
     runs-on: ubuntu-24.04
+    # Rails main is tested to catch changes early; it can break on its own,
+    # so a failure there doesn't fail the run
+    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -137,6 +156,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
 
     steps:
       - uses: actions/checkout@v7
@@ -149,13 +169,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
@@ -185,6 +209,9 @@ jobs:
   ar-mysql:
     name: ActiveRecord MySQL Test
     runs-on: ubuntu-24.04
+    # Rails main is tested to catch changes early; it can break on its own,
+    # so a failure there doesn't fail the run
+    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,6 +220,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         mysql-version:
           - "8.4"
     env:
@@ -228,13 +256,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh

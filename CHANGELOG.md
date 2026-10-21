@@ -7,7 +7,9 @@
 - `#resort`, which sorts like `#sort` but replaces any order the relation
   already has, as `reorder` does for `order`, including the order of an
   association's or default scope. `Property.order(:name).resort(:id)` orders
-  by `id` alone, and `resort(nil)` returns the relation unordered.
+  by `id` alone, and `resort(nil)` removes the order as `reorder(nil)` does
+  (a Rails 8.2 `default_order` still applies, as it does after
+  `reorder(nil)`).
 
 ### Fixed
 

@@ -67,7 +67,9 @@ module ActiveRecord
     #   Property.order(:name).resort(:id)
     #   # => "...ORDER BY properties.id ASC"
     #
-    # With no ordering, or a blank one, the relation is returned unordered.
+    # With no ordering, or a blank one, its order is removed, as
+    # +reorder(nil)+ does. A +default_order+ (Rails 8.2+) still applies when
+    # the relation has no other order, as it does after +reorder(nil)+.
     def resort(*ordering)
       resource = reorder(nil)
       ordering.empty? ? resource : resource.sort(*ordering)
