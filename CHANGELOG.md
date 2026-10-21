@@ -9,6 +9,16 @@
   association's or default scope. `Property.order(:name).resort(:id)` orders
   by `id` alone, and `resort(nil)` returns the relation unordered.
 
+### Fixed
+
+- Aggregates on a relation sort no longer put back a default scope the
+  relation removed. The outer query restricting them to the sorted records
+  started from the model, re-applying its `default_scope`, so with
+  `default_scope { where(active: true) }`,
+  `Property.unscoped.sort(addresses: :id).count` counted only the active
+  records while loading returned them all. A relation that keeps its
+  default scope still counts within it.
+
 ## [8.0.1] - 2026-09-04
 
 ### Changed
