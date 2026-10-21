@@ -60,6 +60,20 @@ module ActiveRecord
       resource
     end
 
+    # Like #sort, but replaces any order the relation already has, as
+    # +reorder+ does for +order+, including the order of an association's or
+    # default scope:
+    #
+    #   Property.order(:name).resort(:id)
+    #   # => "...ORDER BY properties.id ASC"
+    #
+    # With no ordering, or a blank one, the relation is returned unordered.
+    def resort(*ordering)
+      resource = reorder(nil)
+      ordering = ordering.flatten.compact
+      ordering.empty? ? resource : resource.sort(*ordering)
+    end
+
     # Normalizes per-column sort options into [direction, nulls]. A blank
     # direction — a bare column, or "" as query params often produce —
     # means 'asc'; a blank or nil value means no NULLS clause.

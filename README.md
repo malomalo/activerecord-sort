@@ -115,6 +115,26 @@ Property.all.sort            # => Array of Property, sorted by <=>
 Property.sort(nil)           # => relation (unchanged), for chaining
 ```
 
+Replacing an existing order
+---------------------------
+
+`#sort` adds to any order the relation already has, as `order` does.
+`#resort` replaces it, as `reorder` does, including the order of an
+association's or default scope:
+
+```ruby
+Property.order(:name).sort(:id).to_sql
+# => "...ORDER BY properties.name ASC, properties.id ASC"
+
+Property.order(:name).resort(:id).to_sql
+# => "...ORDER BY properties.id ASC"
+
+property.addresses.resort(:id)   # has_many :addresses, -> { order(:name) }
+# => "...ORDER BY addresses.id ASC"
+
+Property.order(:name).resort(nil) # => relation, unordered
+```
+
 Restricting what can be sorted
 ------------------------------
 
