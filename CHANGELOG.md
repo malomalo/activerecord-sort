@@ -25,6 +25,20 @@
   `Property.unscoped.sort(addresses: :id).count` counted only the active
   records while loading returned them all. A relation that keeps its
   default scope still counts within it.
+- Relation sorts now order by the association's own join when its table is
+  joined more than once. Rails aliases the later joins of a table — a
+  second `belongs_to` to the same model, a scoped `has_many`, a
+  self-referential association, or a table the caller already joined —
+  but the sort always named the plain table, so it silently ordered by
+  another join: `Property.joins(:landlord).sort(manager: :name)` ordered
+  by the landlord, `Property.sort(children: :name)` by each record's own
+  name, and `Property.sort(manager: :name).sort(landlord: :name)` dropped
+  the second sort as a duplicate of the first. The sort now finds the
+  alias Rails gave its join when the query is built, so it follows joins
+  added after it too. If that join has been removed (e.g.
+  `unscope(:left_outer_joins)`), building the query raises
+  `ActiveRecord::Sort::InvalidSort` instead of ordering by whichever join
+  has the table's name.
 
 ## [8.0.1] - 2026-09-04
 
