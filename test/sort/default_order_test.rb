@@ -42,39 +42,83 @@ class DefaultOrderTest < ActiveSupport::TestCase
   end
 
   test '#sort overrides the default_order' do
-    assert_equal %w[a b], Property.default_order(:likes).sort(:name).map(&:name)
-    assert_equal %w[x y], Property.find_by!(name: 'a').addresses.sort(:name).map(&:name)
+    query = Property.default_order(:likes).sort(:name)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties" ORDER BY "properties"."name" ASC
+    SQL
+    assert_equal %w[a b], query.map(&:name)
+
+    a = Property.find_by!(name: 'a')
+    query = a.addresses.sort(:name)
+    assert_sql(<<-SQL, query)
+      SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
+      ORDER BY "addresses"."name" ASC
+    SQL
+    assert_equal %w[x y], query.map(&:name)
   end
 
   test '#resort overrides the default_order' do
-    assert_equal %w[a b], Property.default_order(:likes).resort(:name).map(&:name)
-    assert_equal %w[x y], Property.find_by!(name: 'a').addresses.resort(:name).map(&:name)
+    query = Property.default_order(:likes).resort(:name)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties" ORDER BY "properties"."name" ASC
+    SQL
+    assert_equal %w[a b], query.map(&:name)
+
+    a = Property.find_by!(name: 'a')
+    query = a.addresses.resort(:name)
+    assert_sql(<<-SQL, query)
+      SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
+      ORDER BY "addresses"."name" ASC
+    SQL
+    assert_equal %w[x y], query.map(&:name)
   end
 
   test '#resort with no ordering leaves the default_order, as reorder(nil) does' do
-    addresses = Property.find_by!(name: 'a').addresses.order(:name)
+    a = Property.find_by!(name: 'a')
+    addresses = a.addresses.order(:name)
 
-    assert_equal addresses.reorder(nil).to_sql, addresses.resort(nil).to_sql
-    assert_equal %w[y x], addresses.resort(nil).map(&:name)
-    assert_equal %w[y x], addresses.resort.map(&:name)
+    [addresses.resort(nil), addresses.resort, addresses.reorder(nil)].each do |query|
+      assert_sql(<<-SQL, query)
+        SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
+        ORDER BY "addresses"."likes" ASC
+      SQL
+      assert_equal %w[y x], query.map(&:name)
+    end
   end
 
   test '#sort by a relation overrides the default_order' do
     query = Property.default_order(:likes).sort(addresses: :name)
 
-    assert_no_match(/"properties"\."likes"/, query.to_sql)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties"
+      LEFT OUTER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
+      GROUP BY "properties"."id"
+      ORDER BY MIN("addresses"."name") ASC
+    SQL
     assert_equal %w[a b], query.map(&:name)
     assert_equal 1, query.limit(1).count
   end
 
   test 'a blank relation sort leaves the default_order to order the grouped records' do
-    assert_equal %w[b a], Property.default_order(:likes).sort(addresses: nil).map(&:name)
+    query = Property.default_order(:likes).sort(addresses: nil)
+
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties"
+      GROUP BY "properties"."id"
+      ORDER BY "properties"."likes" ASC
+    SQL
+    assert_equal %w[b a], query.map(&:name)
   end
 
   test '#reverse_order reverses a relation sort, not the default_order' do
     query = Property.default_order(:likes).sort(addresses: {name: {asc: :nulls_last}}).reverse_order
 
-    assert_no_match(/"properties"\."likes"/, query.to_sql)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties"
+      LEFT OUTER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
+      GROUP BY "properties"."id"
+      ORDER BY MIN("addresses"."name") DESC NULLS FIRST
+    SQL
     assert_equal %w[b a], query.map(&:name)
   end
 

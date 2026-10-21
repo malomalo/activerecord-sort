@@ -115,6 +115,11 @@ class ActiveSupport::TestCase
 
 
   ## Setup Schema per test suite
+  # Assert +query+'s SQL is +expected+, ignoring differences in whitespace
+  def assert_sql(expected, query)
+    assert_equal(expected.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
+  end
+
   def self.schema(&block)
     self.class_variable_set(:@@schema, block)
   end

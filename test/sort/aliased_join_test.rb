@@ -101,10 +101,6 @@ class AliasedJoinSortTest < ActiveSupport::TestCase
     two.tags = [Tag.create!(name: 'Mall', featured: true)]
   end
 
-  def assert_sql(expected, query)
-    assert_equal(expected.strip.gsub(/\s+/, ' '), query.to_sql.gsub(/\s+/, ' '))
-  end
-
   test '::joins(:belongs_to_relationship).sort(:other_belongs_to_relationship_to_the_same_table => :column)' do
     query = Property.joins(:landlord).sort(manager: {name: :asc}, name: :asc)
 
