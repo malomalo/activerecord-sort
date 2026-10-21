@@ -70,7 +70,6 @@ module ActiveRecord
     # With no ordering, or a blank one, the relation is returned unordered.
     def resort(*ordering)
       resource = reorder(nil)
-      ordering = ordering.flatten.compact
       ordering.empty? ? resource : resource.sort(*ordering)
     end
 
