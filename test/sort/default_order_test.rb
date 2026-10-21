@@ -42,6 +42,12 @@ class DefaultOrderTest < ActiveSupport::TestCase
   end
 
   test '#sort overrides the default_order' do
+    query = Property.default_order(:likes)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties" ORDER BY "properties"."likes" ASC
+    SQL
+    assert_equal %w[b a], query.map(&:name)
+
     query = Property.default_order(:likes).sort(:name)
     assert_sql(<<-SQL, query)
       SELECT "properties".* FROM "properties" ORDER BY "properties"."name" ASC
@@ -49,6 +55,13 @@ class DefaultOrderTest < ActiveSupport::TestCase
     assert_equal %w[a b], query.map(&:name)
 
     a = Property.find_by!(name: 'a')
+    query = a.addresses
+    assert_sql(<<-SQL, query)
+      SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
+      ORDER BY "addresses"."likes" ASC
+    SQL
+    assert_equal %w[y x], query.map(&:name)
+
     query = a.addresses.sort(:name)
     assert_sql(<<-SQL, query)
       SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
@@ -58,6 +71,12 @@ class DefaultOrderTest < ActiveSupport::TestCase
   end
 
   test '#resort overrides the default_order' do
+    query = Property.default_order(:likes)
+    assert_sql(<<-SQL, query)
+      SELECT "properties".* FROM "properties" ORDER BY "properties"."likes" ASC
+    SQL
+    assert_equal %w[b a], query.map(&:name)
+
     query = Property.default_order(:likes).resort(:name)
     assert_sql(<<-SQL, query)
       SELECT "properties".* FROM "properties" ORDER BY "properties"."name" ASC
@@ -65,6 +84,13 @@ class DefaultOrderTest < ActiveSupport::TestCase
     assert_equal %w[a b], query.map(&:name)
 
     a = Property.find_by!(name: 'a')
+    query = a.addresses
+    assert_sql(<<-SQL, query)
+      SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
+      ORDER BY "addresses"."likes" ASC
+    SQL
+    assert_equal %w[y x], query.map(&:name)
+
     query = a.addresses.resort(:name)
     assert_sql(<<-SQL, query)
       SELECT "addresses".* FROM "addresses" WHERE "addresses"."property_id" = #{a.id}
