@@ -203,10 +203,12 @@ module ActiveRecord
       # answer: compute it over the base table restricted to the sorted
       # relation's (distinct) primary keys. User joins and conditions still
       # apply inside the subquery, and a user-added group falls through to
-      # the standard grouped behavior.
+      # the standard grouped behavior. The subquery keeps the group and
+      # order so a limit or offset picks the same records loading would,
+      # rather than counting off fanned-out, unordered rows.
       def calculate(operation, column_name)
         if @sorted_by_relation && group_values == [klass.arel_table[klass.primary_key]]
-          klass.where(klass.primary_key => unscope(:group, :order, :select).select(klass.primary_key))
+          klass.where(klass.primary_key => except(:select).select(klass.primary_key))
                .calculate(operation, column_name)
         else
           super

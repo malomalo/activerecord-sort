@@ -9,6 +9,16 @@
   association's or default scope. `Property.order(:name).resort(:id)` orders
   by `id` alone, and `resort(nil)` returns the relation unordered.
 
+### Fixed
+
+- Aggregates on a relation sort now honor `limit` and `offset`. The
+  subquery that restricts them to the sorted records dropped the sort's
+  `GROUP BY` and `ORDER BY` but kept the `LIMIT`, so the limit applied to
+  the join's fanned-out, unordered rows: `Property.sort(addresses:
+  :id).limit(2).count` returned 1 where two records load, and `sum` added
+  up whichever records those rows happened to belong to. The subquery now
+  keeps the group and order, so it selects the same records loading would.
+
 ## [8.0.1] - 2026-09-04
 
 ### Changed
