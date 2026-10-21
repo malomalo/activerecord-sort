@@ -153,12 +153,11 @@ module ActiveRecord
           # A collection (has_many / has_and_belongs_to_many) wraps the
           # attribute in an Arel::Attributes::Relation so the aggregate
           # references the joined table correctly; a singular association
-          # (belongs_to / has_one) uses the plain attribute.
-          column = if relation.collection?
-            Arel::Attributes::Relation.new(relation.klass.arel_table[column_name], relation.name)
-          else
-            relation.klass.arel_table[column_name]
-          end
+          # (belongs_to / has_one) uses the plain attribute. Either way the
+          # attribute is a JoinedAttribute, pointed at the table (or alias)
+          # the association's join actually uses once the query is built.
+          column = JoinedAttribute.new(relation, column_name)
+          column = Arel::Attributes::Relation.new(column, relation.name) if relation.collection?
 
           direction, nulls = sort_direction_and_nulls(column_options)
 
@@ -194,6 +193,100 @@ module ActiveRecord
   end
 
   module Sort
+    # A column of a sorted association. Rails aliases a table it joins more
+    # than once — a second belongs_to to the same model, a scoped has_many,
+    # a self-join, or a table the caller already joined — and which join
+    # gets the alias depends on every join in the final query, so the sort
+    # can't name the table up front. This stands in for the column until
+    # the query is built, when JoinAliases swaps in the association's
+    # actual table. The reflection is part of its identity, so sorts on two
+    # associations to the same table aren't deduplicated as one.
+    class JoinedAttribute < Arel::Attributes::Attribute
+      attr_reader :reflection
+
+      def initialize(reflection, name)
+        super(reflection.klass.arel_table, name)
+        @reflection = reflection
+      end
+
+      def eql?(other)
+        super && reflection == other.reflection
+      end
+      alias == eql?
+
+      def hash
+        [super, reflection].hash
+      end
+    end
+
+    module JoinAliases
+      def construct_join_dependency(associations, join_type) # :nodoc:
+        join_dependency = super
+        @sort_join_dependencies << join_dependency if @sort_join_dependencies
+        join_dependency
+      end
+
+      private
+
+      # Builds the query, recording the join dependencies Rails constructs
+      # for it, then points each JoinedAttribute in the ORDER BY at the
+      # table its association was joined as. The orders are rebuilt rather
+      # than modified: order nodes are shared with every relation chained
+      # from this one, and those can join differently.
+      def build_arel(...)
+        return super if order_values.empty?
+
+        @sort_join_dependencies = []
+        arel = super
+        # Plus those built beforehand, as eager loading and merge do.
+        join_dependencies = @sort_join_dependencies +
+          (joins_values + left_outer_joins_values).grep(ActiveRecord::Associations::JoinDependency)
+        arel.ast.orders.map! { |order| resolve_sort_joins(order, join_dependencies) }
+        arel
+      ensure
+        @sort_join_dependencies = nil
+      end
+
+      def resolve_sort_joins(node, join_dependencies)
+        case node
+        when JoinedAttribute
+          table = sort_join_table(node.reflection, join_dependencies)
+          raise InvalidSort.new("Can't find the join for #{node.reflection.name} to sort by") unless table
+          table[node.name]
+        when Arel::Attributes::Relation
+          rebuild_sort_node(node, :relation, resolve_sort_joins(node.relation, join_dependencies))
+        when Arel::Nodes::Unary
+          rebuild_sort_node(node, :expr, resolve_sort_joins(node.expr, join_dependencies))
+        when Arel::Nodes::Function
+          rebuild_sort_node(node, :expressions, node.expressions.map { |e| resolve_sort_joins(e, join_dependencies) })
+        else
+          node
+        end
+      end
+
+      def rebuild_sort_node(node, attribute, value)
+        return node if node.public_send(attribute) == value
+
+        node = node.dup
+        node.public_send(:"#{attribute}=", value)
+        node
+      end
+
+      # The table of a top-level join of the association. Every join of it
+      # (the sort's own LEFT JOIN, the caller's, an eager load's) has the
+      # same conditions, so the first found will do.
+      def sort_join_table(reflection, join_dependencies)
+        join_dependencies.each do |join_dependency|
+          join_dependency.send(:join_root).children.each do |join|
+            if join.table && join.reflection.name == reflection.name && join.reflection.active_record == reflection.active_record
+              return join.table
+            end
+          end
+        end
+        nil
+      end
+    end
+
     module Calculations
       # sort_for_relation groups by the primary key and LEFT JOINs the
       # relation, so aggregates would see grouped, fanned-out rows: count
@@ -217,3 +310,4 @@ module ActiveRecord
 end
 
 ActiveRecord::Relation.prepend(ActiveRecord::Sort::Calculations)
+ActiveRecord::Relation.prepend(ActiveRecord::Sort::JoinAliases)
