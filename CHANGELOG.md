@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `#resort`, which sorts like `#sort` but replaces any order the relation
+  already has, as `reorder` does for `order`, including the order of an
+  association's or default scope. `Property.order(:name).resort(:id)` orders
+  by `id` alone, and `resort(nil)` returns the relation unordered.
+
 ## [8.0.1] - 2026-09-04
 
 ### Changed
