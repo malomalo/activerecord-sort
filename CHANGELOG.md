@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [8.1.0] - 2026-10-21
 
 ### Added
 
@@ -170,5 +170,7 @@ The gem's version is now independent of the Rails version it targets.
   `ActiveRecord::QueryMethods.public_instance_methods(false)` — which keeps
   Rails' internal delegation invariants intact.
 
+[8.1.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v8.1.0
+[8.0.1]: https://github.com/malomalo/activerecord-sort/releases/tag/v8.0.1
 [8.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v8.0.0
 [7.0.0]: https://github.com/malomalo/activerecord-sort/releases/tag/v7.0.0
