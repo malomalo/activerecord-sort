@@ -17,13 +17,22 @@ class CalculationsSortTest < ActiveSupport::TestCase
       t.integer  "property_id"
       t.integer  "tag_id"
     end
+
+    create_table "addresses", force: :cascade do |t|
+      t.integer  "property_id"
+    end
   end
 
   class Tag < ActiveRecord::Base
+    has_and_belongs_to_many :properties
+  end
+
+  class Address < ActiveRecord::Base
   end
 
   class Property < ActiveRecord::Base
     has_and_belongs_to_many :tags
+    has_many :addresses
   end
 
   class ScopedProperty < ActiveRecord::Base
@@ -32,12 +41,15 @@ class CalculationsSortTest < ActiveSupport::TestCase
     has_and_belongs_to_many :tags, join_table: 'properties_tags', foreign_key: 'property_id'
   end
 
-  # single is the one inactive property, hidden by ScopedProperty's
-  # default scope.
+  # Addresses mirror the tags: multi has two, single one, untagged none.
+  # single is the one inactive property, hidden by ScopedProperty's default
+  # scope.
   fixtures do
-    Property.create!(name: 'multi', views: 10, tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
-    Property.create!(name: 'single', views: 20, active: false, tags: [Tag.create!(name: 'Mall')])
+    multi = Property.create!(name: 'multi', views: 10, tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
+    single = Property.create!(name: 'single', views: 20, active: false, tags: [Tag.create!(name: 'Mall')])
     Property.create!(name: 'untagged', views: 30)
+    2.times { multi.addresses.create! }
+    single.addresses.create!
   end
 
   test '::sort(:column).count returns the record count' do
@@ -70,6 +82,50 @@ class CalculationsSortTest < ActiveSupport::TestCase
     counts = Property.sort(tags: {name: :asc}).group(:name).count
 
     assert_kind_of Hash, counts
+  end
+
+  # limit and offset select records, not the sort's fanned-out rows, so
+  # aggregates cover exactly the records the relation loads.
+  test '::sort(:has_many_relationship => :column).limit(...).count counts the limited records' do
+    assert_equal 2, Property.sort(addresses: :id).limit(2).count
+    assert_equal 2, Property.sort(addresses: :id).limit(2).count(:all)
+    assert_equal 2, Property.sort(addresses: :id).limit(2).count(:views)
+  end
+
+  test '::sort(:has_many_relationship => :column).offset(...).count counts the remaining records' do
+    assert_equal 2, Property.sort(addresses: :id).offset(1).count
+    assert_equal 1, Property.sort(addresses: :id).limit(1).offset(1).count
+  end
+
+  test '::sort(:has_many_relationship => :column).limit(...) aggregates over the records it loads' do
+    query = Property.sort(addresses: {id: {asc: :nulls_last}}).limit(2)
+
+    assert_equal ['multi', 'single'], query.map(&:name)
+    assert_equal 30, query.sum(:views)
+    assert_equal 15, query.average(:views)
+    assert_equal 10, query.minimum(:views)
+    assert_equal 20, query.maximum(:views)
+  end
+
+  test '::sort(:habtm_relationship => {:column => {:asc => :nulls_first}}).limit(...).sum follows the sort order' do
+    query = Property.sort(tags: {name: {asc: :nulls_first}}).limit(1)
+
+    assert_equal ['untagged'], query.map(&:name)
+    assert_equal 30, query.sum(:views)
+  end
+
+  test '::sort(:has_many_relationship => :column).none.count returns 0' do
+    assert_equal 0, Property.sort(addresses: :id).none.count
+    assert_equal 0, Property.sort(addresses: :id).limit(2).none.count
+  end
+
+  test 'association.sort(:has_many_relationship => :column).limit(...) aggregates over the limited records' do
+    query = Tag.find_by!(name: 'Zoo').properties.sort(addresses: :id)
+
+    assert_equal 1, query.count
+    assert_equal 1, query.limit(2).count
+    assert_equal 10, query.limit(2).sum(:views)
+    assert_equal 0, query.offset(1).count
   end
 
   # The aggregate covers the relation's records, so a default scope the
