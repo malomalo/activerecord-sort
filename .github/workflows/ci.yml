@@ -14,9 +14,6 @@ jobs:
   test:
     name: ActiveRecord::Sort Test
     runs-on: ubuntu-24.04
-    # Rails main is tested to catch changes early; it can break on its own,
-    # so a failure there doesn't fail the run
-    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,9 +64,6 @@ jobs:
   ar-postgresql:
     name: ActiveRecord PostgresQL Test
     runs-on: ubuntu-24.04
-    # Rails main is tested to catch changes early; it can break on its own,
-    # so a failure there doesn't fail the run
-    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -145,9 +139,6 @@ jobs:
   ar-sqlite:
     name: ActiveRecord SQLite Test
     runs-on: ubuntu-24.04
-    # Rails main is tested to catch changes early; it can break on its own,
-    # so a failure there doesn't fail the run
-    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -209,9 +200,6 @@ jobs:
   ar-mysql:
     name: ActiveRecord MySQL Test
     runs-on: ubuntu-24.04
-    # Rails main is tested to catch changes early; it can break on its own,
-    # so a failure there doesn't fail the run
-    continue-on-error: ${{ matrix.rails-version == 'main' }}
     strategy:
       fail-fast: false
       matrix:
