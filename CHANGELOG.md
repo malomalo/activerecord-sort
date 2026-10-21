@@ -11,6 +11,20 @@
 
 ### Fixed
 
+- Aggregates on a relation sort now honor `limit` and `offset`. The
+  subquery that restricts them to the sorted records dropped the sort's
+  `GROUP BY` and `ORDER BY` but kept the `LIMIT`, so the limit applied to
+  the join's fanned-out, unordered rows: `Property.sort(addresses:
+  :id).limit(2).count` returned 1 where two records load, and `sum` added
+  up whichever records those rows happened to belong to. The subquery now
+  keeps the group and order, so it selects the same records loading would.
+- Aggregates on a relation sort no longer put back a default scope the
+  relation removed. The outer query restricting them to the sorted records
+  started from the model, re-applying its `default_scope`, so with
+  `default_scope { where(active: true) }`,
+  `Property.unscoped.sort(addresses: :id).count` counted only the active
+  records while loading returned them all. A relation that keeps its
+  default scope still counts within it.
 - Relation sorts now order by the association's own join when its table is
   joined more than once. Rails aliases the later joins of a table — a
   second `belongs_to` to the same model, a scoped `has_many`, a
