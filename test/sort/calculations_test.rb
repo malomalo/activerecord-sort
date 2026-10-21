@@ -6,6 +6,7 @@ class CalculationsSortTest < ActiveSupport::TestCase
     create_table "properties", force: :cascade do |t|
       t.string   "name",                 limit: 255
       t.integer  "views"
+      t.boolean  "active",               default: true
     end
 
     create_table "tags", force: :cascade do |t|
@@ -34,10 +35,18 @@ class CalculationsSortTest < ActiveSupport::TestCase
     has_many :addresses
   end
 
+  class ScopedProperty < ActiveRecord::Base
+    self.table_name = 'properties'
+    default_scope { where(active: true) }
+    has_and_belongs_to_many :tags, join_table: 'properties_tags', foreign_key: 'property_id'
+  end
+
   # Addresses mirror the tags: multi has two, single one, untagged none.
+  # single is the one inactive property, hidden by ScopedProperty's default
+  # scope.
   fixtures do
     multi = Property.create!(name: 'multi', views: 10, tags: [Tag.create!(name: 'Zoo'), Tag.create!(name: 'Apex')])
-    single = Property.create!(name: 'single', views: 20, tags: [Tag.create!(name: 'Mall')])
+    single = Property.create!(name: 'single', views: 20, active: false, tags: [Tag.create!(name: 'Mall')])
     Property.create!(name: 'untagged', views: 30)
     2.times { multi.addresses.create! }
     single.addresses.create!
@@ -117,6 +126,32 @@ class CalculationsSortTest < ActiveSupport::TestCase
     assert_equal 1, query.limit(2).count
     assert_equal 10, query.limit(2).sum(:views)
     assert_equal 0, query.offset(1).count
+  end
+
+  # The aggregate covers the relation's records, so a default scope the
+  # relation removed stays removed; one it keeps still applies.
+  test '::unscoped.sort(:habtm_relationship => :column) aggregates over every record' do
+    query = ScopedProperty.unscoped.sort(tags: :name)
+
+    assert_equal 3, query.to_a.size
+    assert_equal 3, query.count
+    assert_equal 60, query.sum(:views)
+  end
+
+  test '::unscope(where: ...).sort(:habtm_relationship => :column) aggregates without the removed condition' do
+    query = ScopedProperty.unscope(where: :active).sort(tags: :name)
+
+    assert_equal 3, query.to_a.size
+    assert_equal 3, query.count
+    assert_equal 60, query.sum(:views)
+  end
+
+  test '::sort(:habtm_relationship => :column) on a default scoped model aggregates over the scoped records' do
+    query = ScopedProperty.sort(tags: :name)
+
+    assert_equal 2, query.to_a.size
+    assert_equal 2, query.count
+    assert_equal 40, query.sum(:views)
   end
 
 end

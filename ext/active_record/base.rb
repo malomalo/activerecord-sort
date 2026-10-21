@@ -205,10 +205,12 @@ module ActiveRecord
       # apply inside the subquery, and a user-added group falls through to
       # the standard grouped behavior. The subquery keeps the group and
       # order so a limit or offset picks the same records loading would,
-      # rather than counting off fanned-out, unordered rows.
+      # rather than counting off fanned-out, unordered rows. The outer query
+      # is unscoped: the subquery already carries whatever default scope the
+      # relation kept, and must not have one it removed put back.
       def calculate(operation, column_name)
         if @sorted_by_relation && group_values == [klass.arel_table[klass.primary_key]]
-          klass.where(klass.primary_key => except(:select).select(klass.primary_key))
+          klass.unscoped.where(klass.primary_key => except(:select).select(klass.primary_key))
                .calculate(operation, column_name)
         else
           super
