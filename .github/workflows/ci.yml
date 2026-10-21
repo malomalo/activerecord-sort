@@ -20,6 +20,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         ruby-version:
           - "3.3"
           - "3.4"
@@ -47,7 +48,11 @@ jobs:
 
       - run: |
           echo ""  >> Gemfile
-          echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
+          if [ "${{ matrix.rails-version }}" = "main" ]; then
+            echo 'gem "rails", github: "rails/rails", branch: "main"' >> Gemfile
+          else
+            echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
+          fi
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -67,6 +72,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         postgres-version:
           - "18"
 
@@ -96,13 +102,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
@@ -124,7 +134,11 @@ jobs:
       - run: |
           pushd ~/rails/activerecord
           bundle exec rake db:postgresql:rebuild postgresql:test
-          bundle exec rake db:postgresql:rebuild postgresql:isolated_test
+          # Rails main removed the isolated test tasks; run them where they exist
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake postgresql:isolated_test" <<<"$tasks"; then
+            bundle exec rake db:postgresql:rebuild postgresql:isolated_test
+          fi
           
   ar-sqlite:
     name: ActiveRecord SQLite Test
@@ -137,6 +151,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
 
     steps:
       - uses: actions/checkout@v7
@@ -149,13 +164,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
@@ -178,8 +197,12 @@ jobs:
           pushd ~/rails/activerecord
           bundle exec rake sqlite3:test
           rm test/db/*.sqlite3 test/fixtures/*.sqlite3
-          bundle exec rake sqlite3:isolated_test
-          rm test/db/*.sqlite3 test/fixtures/*.sqlite3
+          # Rails main removed the isolated test tasks; run them where they exist
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake sqlite3:isolated_test" <<<"$tasks"; then
+            bundle exec rake sqlite3:isolated_test
+            rm test/db/*.sqlite3 test/fixtures/*.sqlite3
+          fi
           bundle exec rake sqlite3_mem:test
         
   ar-mysql:
@@ -193,6 +216,7 @@ jobs:
         rails-version:
           - "8.0"
           - "8.1"
+          - "main"
         mysql-version:
           - "8.4"
     env:
@@ -228,13 +252,17 @@ jobs:
       - name: Download Rails
         run: |
           series="${{ matrix.rails-version }}"
-          esc="${series//./\\.}"
-          RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
-            | sed 's,.*refs/tags/,,' \
-            | grep -E "^v${esc}(\.[0-9]+)+$" \
-            | sort -V | tail -1)
-          test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
-          echo "Using latest Rails tag for ${series}: $RAILS_TAG"
+          if [ "$series" = "main" ]; then
+            RAILS_TAG=main
+          else
+            esc="${series//./\\.}"
+            RAILS_TAG=$(git ls-remote --tags --refs https://github.com/rails/rails.git "v${series}*" \
+              | sed 's,.*refs/tags/,,' \
+              | grep -E "^v${esc}(\.[0-9]+)+$" \
+              | sort -V | tail -1)
+            test -n "$RAILS_TAG" || { echo "No Rails release tag found for series ${series}"; exit 1; }
+          fi
+          echo "Using Rails ${series}: $RAILS_TAG"
           git clone --branch "$RAILS_TAG" https://github.com/rails/rails.git ~/rails
           pushd ~/rails
           cat /home/runner/work/_temp/*.sh
@@ -256,4 +284,8 @@ jobs:
       - run: |
           pushd ~/rails/activerecord
           bundle exec rake db:mysql:rebuild mysql2:test
-          bundle exec rake db:mysql:rebuild mysql2:isolated_test
+          # Rails main removed the isolated test tasks; run them where they exist
+          tasks=$(bundle exec rake -P)
+          if grep -qx "rake mysql2:isolated_test" <<<"$tasks"; then
+            bundle exec rake db:mysql:rebuild mysql2:isolated_test
+          fi

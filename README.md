@@ -132,7 +132,18 @@ Property.order(:name).resort(:id).to_sql
 property.addresses.resort(:id)   # has_many :addresses, -> { order(:name) }
 # => "...ORDER BY addresses.id ASC"
 
-Property.order(:name).resort(nil) # => relation, unordered
+Property.order(:name).resort(nil) # => relation, with no ORDER BY
+```
+
+With no ordering, `#resort` removes the order the way `reorder(nil)` does, so a
+`default_order` (Rails 8.2+), which applies when a relation has no other order,
+still applies:
+
+```ruby
+has_many :addresses, default_order: :likes
+
+property.addresses.resort(nil)    # ORDER BY likes, as with reorder(nil)
+property.addresses.resort(:name)  # ORDER BY name
 ```
 
 Restricting what can be sorted
