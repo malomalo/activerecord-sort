@@ -154,4 +154,87 @@ class CalculationsSortTest < ActiveSupport::TestCase
     assert_equal 40, query.sum(:views)
   end
 
+  # Yields, then returns the [query, async] of each select_all the
+  # connection was asked to run meanwhile.
+  def select_alls
+    connection = Property.connection
+    queries = []
+    connection.define_singleton_method(:select_all) do |arel, name = nil, binds = [], **options|
+      queries << [arel, options[:async]]
+      super(arel, name, binds, **options)
+    end
+    yield
+    queries
+  ensure
+    connection.singleton_class.send(:remove_method, :select_all)
+  end
+
+  # Async calculations return a promise of the same aggregate, and the
+  # query restricting it to the sorted records is run asynchronously, as
+  # Rails runs its own. (No async executor is configured here, so Rails
+  # still runs it in the foreground; what matters is that it's asked to.)
+  test '::sort(:has_many_relationship => :column) async calculations return promises of the aggregates' do
+    query = Property.sort(addresses: :id)
+
+    {
+      [:async_count]           => [3, 'COUNT(*)'],
+      [:async_count, :views]   => [3, 'COUNT("properties"."views")'],
+      [:async_sum, :views]     => [60, 'SUM("properties"."views")'],
+      [:async_average, :views] => [20, 'AVG("properties"."views")'],
+      [:async_minimum, :views] => [10, 'MIN("properties"."views")'],
+      [:async_maximum, :views] => [30, 'MAX("properties"."views")']
+    }.each do |(method, *args), (expected, aggregate)|
+      promise = nil
+      queries = select_alls { promise = query.public_send(method, *args) }
+
+      assert promise.is_a?(ActiveRecord::Promise)
+      assert_equal expected, promise.value
+      assert_equal 1, queries.size
+      assert_equal true, queries[0][1]
+      assert_sql(<<-SQL, queries[0][0])
+        SELECT #{aggregate} FROM "properties"
+        WHERE "properties"."id" IN (SELECT "properties"."id" FROM "properties"
+        LEFT OUTER JOIN "addresses" ON "addresses"."property_id" = "properties"."id"
+        GROUP BY "properties"."id"
+        ORDER BY MIN("addresses"."id") ASC)
+      SQL
+    end
+  end
+
+  test '::sort(:has_many_relationship => :column).limit(...) async calculations aggregate over the limited records' do
+    query = Property.sort(addresses: {id: {asc: :nulls_last}}).limit(2)
+
+    assert_equal 2, query.async_count.value
+    assert_equal 30, query.async_sum(:views).value
+  end
+
+  test '::sort(:has_many_relationship => :column).none async calculations return promises of 0' do
+    assert_equal 0, Property.sort(addresses: :id).none.async_count.value
+    assert_equal 0, Property.sort(addresses: :id).none.async_sum(:views).value
+  end
+
+  test '::sort(:has_many_relationship => :column) with an additional group falls through to async grouped aggregates' do
+    assert_kind_of Hash, Property.sort(addresses: :id).group(:name).async_count.value
+  end
+
+  # async_pluck, async_pick and async_ids don't go through calculate, so
+  # the override never sees them; they still work on the sorted relation.
+  test '::sort(:has_many_relationship => :column) async_pluck, async_pick and async_ids follow the sort' do
+    query = Property.sort(addresses: {id: {asc: :nulls_last}})
+
+    assert_equal ['multi', 'single', 'untagged'], query.async_pluck(:name).value
+    assert_equal 'multi', query.async_pick(:name).value
+    assert_equal query.map(&:id), query.async_ids.value
+  end
+
+  test 'async calculations on a relation without a relation sort are unchanged' do
+    [Property.all, Property.sort(:name)].each do |query|
+      assert_equal 3, query.async_count.value
+      assert_equal 60, query.async_sum(:views).value
+      assert_equal 20, query.async_average(:views).value
+      assert_equal 10, query.async_minimum(:views).value
+      assert_equal 30, query.async_maximum(:views).value
+    end
+  end
+
 end
