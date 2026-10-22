@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Async calculations on a relation sort now return a promise. The
+  aggregate override computed the value over the sorted records and
+  returned it directly, so `Property.sort(addresses: :id).async_count.value`
+  raised `NoMethodError: undefined method 'value' for an instance of
+  Integer`, as did `async_sum`, `async_average`, `async_minimum` and
+  `async_maximum`. The query restricting the aggregate to the sorted
+  records now runs asynchronously, as Rails runs its own, and its promise
+  is returned.
+
 ## [8.1.0] - 2026-10-21
 
 ### Added
